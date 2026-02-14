@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ActivityIndicator,
   TextInput,
   KeyboardAvoidingView,
@@ -17,30 +16,27 @@ import { useAuth } from '../context/AuthContext';
 import { Colors, FontSize, BorderRadius } from '../constants/theme';
 
 type Props = {
-  navigation?: any;
+  navigation: any;
 };
 
-export default function LoginScreen({ navigation }: Props) {
-  const { signInWithGoogle, signInWithEmail, signInAsGuest } = useAuth();
+export default function SignUpScreen({ navigation }: Props) {
+  const { signUpWithEmail } = useAuth();
 
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const handleGoogleLogin = async () => {
-    setLoading(true);
+  const handleSignUp = async () => {
     setError(null);
-    try {
-      await signInWithGoogle();
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleEmailLogin = async () => {
-    setError(null);
+    if (!name.trim()) {
+      setError('이름을 입력해주세요.');
+      return;
+    }
     if (!email.trim()) {
       setError('이메일을 입력해주세요.');
       return;
@@ -49,13 +45,22 @@ export default function LoginScreen({ navigation }: Props) {
       setError('비밀번호를 입력해주세요.');
       return;
     }
+    if (password.length < 6) {
+      setError('비밀번호는 6자 이상이어야 합니다.');
+      return;
+    }
+    if (password !== passwordConfirm) {
+      setError('비밀번호가 일치하지 않습니다.');
+      return;
+    }
 
     setLoading(true);
     try {
-      const result = await signInWithEmail(email.trim(), password);
+      const result = await signUpWithEmail(email.trim(), password, name.trim());
       if (!result.success) {
-        setError(result.error || '로그인에 실패했습니다.');
+        setError(result.error || '회원가입에 실패했습니다.');
       }
+      // 성공 시 AuthContext에서 user가 세팅되므로 자동으로 홈 화면으로 전환됨
     } finally {
       setLoading(false);
     }
@@ -72,20 +77,23 @@ export default function LoginScreen({ navigation }: Props) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* Logo */}
-          <View style={styles.logoArea}>
-            <Image
-              source={require('../../assets/favicon.png')}
-              style={styles.logo}
-              resizeMode="contain"
-            />
-            <Text style={styles.appName}>읽계</Text>
-            <Text style={styles.appDesc}>계약서 읽어주는 AI</Text>
+          {/* 헤더 */}
+          <View>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="arrow-back" size={24} color={Colors.stone900} />
+            </TouchableOpacity>
+
+            <Text style={styles.title}>회원가입</Text>
+            <Text style={styles.subtitle}>읽계에 가입하고 계약서를 분석해보세요.</Text>
           </View>
 
-          {/* 로그인 폼 */}
+          {/* 폼 */}
           <View style={styles.formArea}>
-            {/* 에러 메시지 */}
+            {/* 에러 */}
             {error && (
               <View style={styles.errorBanner}>
                 <MaterialIcons name="error-outline" size={16} color={Colors.red600} />
@@ -93,7 +101,21 @@ export default function LoginScreen({ navigation }: Props) {
               </View>
             )}
 
-            {/* 이메일 입력 */}
+            {/* 이름 */}
+            <View style={styles.inputWrap}>
+              <MaterialIcons name="person-outline" size={20} color={Colors.stone400} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="이름"
+                placeholderTextColor={Colors.stone400}
+                autoCapitalize="words"
+                value={name}
+                onChangeText={setName}
+                editable={!loading}
+              />
+            </View>
+
+            {/* 이메일 */}
             <View style={styles.inputWrap}>
               <MaterialIcons name="mail-outline" size={20} color={Colors.stone400} style={styles.inputIcon} />
               <TextInput
@@ -109,12 +131,12 @@ export default function LoginScreen({ navigation }: Props) {
               />
             </View>
 
-            {/* 비밀번호 입력 */}
+            {/* 비밀번호 */}
             <View style={styles.inputWrap}>
               <MaterialIcons name="lock-outline" size={20} color={Colors.stone400} style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="비밀번호"
+                placeholder="비밀번호 (6자 이상)"
                 placeholderTextColor={Colors.stone400}
                 secureTextEntry={!showPassword}
                 value={password}
@@ -130,69 +152,45 @@ export default function LoginScreen({ navigation }: Props) {
               </TouchableOpacity>
             </View>
 
-            {/* 로그인 버튼 */}
+            {/* 비밀번호 확인 */}
+            <View style={styles.inputWrap}>
+              <MaterialIcons name="lock-outline" size={20} color={Colors.stone400} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="비밀번호 확인"
+                placeholderTextColor={Colors.stone400}
+                secureTextEntry={!showPassword}
+                value={passwordConfirm}
+                onChangeText={setPasswordConfirm}
+                editable={!loading}
+              />
+            </View>
+
+            {/* 가입 버튼 */}
             <TouchableOpacity
-              style={[styles.loginButton, loading && styles.loginButtonDisabled]}
+              style={[styles.signupButton, loading && styles.signupButtonDisabled]}
               activeOpacity={0.85}
-              onPress={handleEmailLogin}
+              onPress={handleSignUp}
               disabled={loading}
             >
               {loading ? (
                 <ActivityIndicator color={Colors.white} />
               ) : (
-                <Text style={styles.loginButtonText}>로그인</Text>
+                <Text style={styles.signupButtonText}>가입하기</Text>
               )}
-            </TouchableOpacity>
-
-            {/* 구분선 */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>또는</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Google 로그인 */}
-            <TouchableOpacity
-              style={styles.googleButton}
-              activeOpacity={0.8}
-              onPress={handleGoogleLogin}
-              disabled={loading}
-            >
-              <Image
-                source={{ uri: 'https://developers.google.com/identity/images/g-logo.png' }}
-                style={styles.googleIcon}
-              />
-              <Text style={styles.googleButtonText}>Google로 계속하기</Text>
-            </TouchableOpacity>
-
-            {/* 게스트 로그인 */}
-            <TouchableOpacity
-              style={styles.guestButton}
-              activeOpacity={0.8}
-              onPress={signInAsGuest}
-              disabled={loading}
-            >
-              <Text style={styles.guestButtonText}>게스트로 시작하기</Text>
             </TouchableOpacity>
           </View>
 
-          {/* 하단: 회원가입 전환 + 약관 */}
+          {/* 하단: 로그인 전환 */}
           <View style={styles.bottomArea}>
             <TouchableOpacity
-              style={styles.signupRow}
+              style={styles.loginRow}
               activeOpacity={0.7}
-              onPress={() => navigation?.navigate('SignUp')}
+              onPress={() => navigation.goBack()}
             >
-              <Text style={styles.signupHint}>아직 계정이 없으신가요?</Text>
-              <Text style={styles.signupLink}> 회원가입</Text>
+              <Text style={styles.loginHint}>이미 계정이 있으신가요?</Text>
+              <Text style={styles.loginLink}> 로그인</Text>
             </TouchableOpacity>
-
-            <Text style={styles.terms}>
-              계속 진행하면{' '}
-              <Text style={styles.termsLink}>이용약관</Text> 및{' '}
-              <Text style={styles.termsLink}>개인정보처리방침</Text>에{'\n'}
-              동의하는 것으로 간주됩니다.
-            </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -212,30 +210,29 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'space-between',
     paddingHorizontal: 28,
-    paddingTop: 40,
+    paddingTop: 16,
     paddingBottom: 32,
   },
 
-  // Logo
-  logoArea: {
+  // Header
+  backButton: {
+    width: 40,
+    height: 40,
     alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 32,
-  },
-  logo: {
-    width: 88,
-    height: 88,
+    justifyContent: 'center',
+    borderRadius: 12,
     marginBottom: 16,
   },
-  appName: {
-    fontSize: 32,
+  title: {
+    fontSize: FontSize['2xl'],
     fontWeight: '700',
     color: Colors.stone900,
-    marginBottom: 4,
+    marginBottom: 6,
   },
-  appDesc: {
+  subtitle: {
     fontSize: FontSize.md,
     color: Colors.stone500,
+    marginBottom: 28,
   },
 
   // Form
@@ -282,102 +279,39 @@ const styles = StyleSheet.create({
     padding: 6,
   },
 
-  // Login Button
-  loginButton: {
+  // Sign Up Button
+  signupButton: {
     backgroundColor: Colors.primaryDark,
     borderRadius: BorderRadius.lg,
     paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 4,
+    marginTop: 8,
   },
-  loginButtonDisabled: {
+  signupButtonDisabled: {
     opacity: 0.6,
   },
-  loginButtonText: {
+  signupButtonText: {
     fontSize: FontSize.lg,
     fontWeight: '700',
     color: Colors.white,
   },
 
-  // Divider
-  dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 4,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: Colors.stone100,
-  },
-  dividerText: {
-    marginHorizontal: 16,
-    fontSize: FontSize.sm,
-    color: Colors.stone400,
-    fontWeight: '500',
-  },
-
-  // Google
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.stone300,
-    borderRadius: BorderRadius.lg,
-    paddingVertical: 14,
-    gap: 12,
-  },
-  googleIcon: {
-    width: 20,
-    height: 20,
-  },
-  googleButtonText: {
-    fontSize: FontSize.md,
-    fontWeight: '600',
-    color: Colors.stone900,
-  },
-
-  // Guest
-  guestButton: {
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  guestButtonText: {
-    fontSize: FontSize.sm,
-    fontWeight: '600',
-    color: Colors.stone500,
-    textDecorationLine: 'underline',
-  },
-
   // Bottom
   bottomArea: {
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 24,
   },
-  signupRow: {
+  loginRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
   },
-  signupHint: {
+  loginHint: {
     fontSize: FontSize.md,
     color: Colors.stone500,
   },
-  signupLink: {
+  loginLink: {
     fontSize: FontSize.md,
     fontWeight: '700',
     color: Colors.primaryDark,
-  },
-  terms: {
-    fontSize: FontSize.xs,
-    color: Colors.stone400,
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  termsLink: {
-    color: Colors.primaryDark,
-    fontWeight: '500',
   },
 });

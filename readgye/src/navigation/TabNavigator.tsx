@@ -1,13 +1,40 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialIcons } from '@expo/vector-icons';
 import HomeScreen from '../screens/HomeScreen';
 import ArchiveScreen from '../screens/ArchiveScreen';
 import CounselingScreen from '../screens/CounselingScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import EditProfileScreen from '../screens/EditProfileScreen';
+import UploadScreen from '../screens/UploadScreen';
+import AnalysisResultScreen from '../screens/AnalysisResultScreen';
 import { Colors, FontSize } from '../constants/theme';
 
 const Tab = createBottomTabNavigator();
+const HomeStack = createNativeStackNavigator();
+const SettingsStack = createNativeStackNavigator();
+
+// 홈 탭 내부 스택 네비게이터 (홈 → 업로드 → 분석결과)
+function HomeStackNavigator() {
+  return (
+    <HomeStack.Navigator screenOptions={{ headerShown: false }}>
+      <HomeStack.Screen name="HomeMain" component={HomeScreen} />
+      <HomeStack.Screen name="Upload" component={UploadScreen} />
+      <HomeStack.Screen name="AnalysisResult" component={AnalysisResultScreen} />
+    </HomeStack.Navigator>
+  );
+}
+
+// 설정 탭 내부 스택 네비게이터 (설정 → 개인정보 수정)
+function SettingsStackNavigator() {
+  return (
+    <SettingsStack.Navigator screenOptions={{ headerShown: false }}>
+      <SettingsStack.Screen name="SettingsMain" component={SettingsScreen} />
+      <SettingsStack.Screen name="EditProfile" component={EditProfileScreen} />
+    </SettingsStack.Navigator>
+  );
+}
 
 export default function TabNavigator() {
   return (
@@ -34,7 +61,7 @@ export default function TabNavigator() {
     >
       <Tab.Screen
         name="Home"
-        component={HomeScreen}
+        component={HomeStackNavigator}
         options={{
           tabBarLabel: '홈',
           tabBarIcon: ({ color, size }) => (
@@ -64,7 +91,7 @@ export default function TabNavigator() {
       />
       <Tab.Screen
         name="Settings"
-        component={SettingsScreen}
+        component={SettingsStackNavigator}
         options={{
           tabBarLabel: '설정',
           tabBarIcon: ({ color, size }) => (

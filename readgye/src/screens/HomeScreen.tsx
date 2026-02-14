@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { Colors, FontSize, BorderRadius } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 
@@ -112,6 +113,7 @@ function ActivityItem({
 // --- Main Screen ---
 export default function HomeScreen() {
   const { user } = useAuth();
+  const navigation = useNavigation<any>();
   const now = new Date();
   const formattedDate = `${now.getMonth() + 1}월 ${now.getDate()}일 ${WEEKDAYS_KO[now.getDay()]}`;
 
@@ -168,7 +170,11 @@ export default function HomeScreen() {
         </View>
 
         {/* CTA Button */}
-        <TouchableOpacity style={styles.ctaButton} activeOpacity={0.85}>
+        <TouchableOpacity
+          style={styles.ctaButton}
+          activeOpacity={0.85}
+          onPress={() => navigation.navigate('Upload')}
+        >
           <View style={styles.ctaIconBg}>
             <MaterialIcons name="add" size={28} color={Colors.white} />
           </View>

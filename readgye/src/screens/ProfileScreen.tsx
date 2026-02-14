@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { Colors, FontSize } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 
@@ -17,12 +18,13 @@ type SettingRowProps = {
   label: string;
   subtitle?: string;
   showDivider?: boolean;
+  onPress?: () => void;
 };
 
-function SettingRow({ icon, label, subtitle, showDivider }: SettingRowProps) {
+function SettingRow({ icon, label, subtitle, showDivider, onPress }: SettingRowProps) {
   return (
     <>
-      <TouchableOpacity style={styles.row} activeOpacity={0.75}>
+      <TouchableOpacity style={styles.row} activeOpacity={0.75} onPress={onPress}>
         <View style={styles.rowLeft}>
           <MaterialIcons name={icon} size={22} color={Colors.primaryDark} />
           <View style={styles.rowTextWrap}>
@@ -39,6 +41,7 @@ function SettingRow({ icon, label, subtitle, showDivider }: SettingRowProps) {
 
 export default function ProfileScreen() {
   const { user, signOut } = useAuth();
+  const navigation = useNavigation<any>();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -77,7 +80,12 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>계정 설정</Text>
           <View style={styles.groupCard}>
-            <SettingRow icon="person-outline" label="개인정보 수정" showDivider />
+            <SettingRow
+              icon="person-outline"
+              label="개인정보 수정"
+              showDivider
+              onPress={() => navigation.navigate('EditProfile')}
+            />
             <SettingRow icon="lock-outline" label="비밀번호 변경" showDivider />
             <SettingRow icon="link" label="연동 계정" />
           </View>
