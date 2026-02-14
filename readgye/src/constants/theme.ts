@@ -1,0 +1,61 @@
+export const Colors = {
+  primary: '#FBBF24',
+  primaryDark: '#D97706',
+  secondary: '#FFFBEB',
+  accent: '#F59E0B',
+  backgroundLight: '#FFFCF5',
+  backgroundDark: '#1C1917',
+  surfaceLight: '#FFFFFF',
+  surfaceDark: '#292524',
+  stone50: '#FAFAF9',
+  stone100: '#F5F5F4',
+  stone300: '#D6D3D1',
+  stone400: '#A8A29E',
+  stone500: '#78716C',
+  stone600: '#57534E',
+  stone800: '#292524',
+  stone900: '#1C1917',
+  white: '#FFFFFF',
+  red50: '#FEF2F2',
+  red100: '#FEE2E2',
+  red500: '#EF4444',
+  red600: '#DC2626',
+  red800: '#991B1B',
+  green50: '#F0FDF4',
+  green100: '#DCFCE7',
+  green400: '#4ADE80',
+  green500: '#22C55E',
+  green600: '#16A34A',
+  green800: '#166534',
+  yellow50: '#FEFCE8',
+  yellow100: '#FEF9C3',
+};
+
+export const Spacing = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  '2xl': 24,
+  '3xl': 32,
+  '4xl': 48,
+};
+
+export const FontSize = {
+  xs: 10,
+  sm: 12,
+  md: 14,
+  lg: 16,
+  xl: 18,
+  '2xl': 24,
+  '3xl': 30,
+};
+
+export const BorderRadius = {
+  sm: 4,
+  md: 8,
+  lg: 12,
+  xl: 16,
+  full: 9999,
+};

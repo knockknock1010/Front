@@ -1,0 +1,553 @@
+﻿import React from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  Image,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Colors, FontSize, BorderRadius } from '../constants/theme';
+
+const { width } = Dimensions.get('window');
+const CARD_WIDTH = (width - 24 * 2 - 16) / 2;
+const WEEKDAYS_KO = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+
+// --- Stat Card ---
+function StatCard({
+  icon,
+  iconBg,
+  iconColor,
+  label,
+  value,
+}: {
+  icon: keyof typeof MaterialIcons.glyphMap;
+  iconBg: string;
+  iconColor: string;
+  label: string;
+  value: number;
+}) {
+  return (
+    <View style={[styles.statCard, { minWidth: CARD_WIDTH }]}>
+      <View style={styles.statHeader}>
+        <View style={[styles.statIconWrap, { backgroundColor: iconBg }]}>
+          <MaterialIcons name={icon} size={16} color={iconColor} />
+        </View>
+        <Text style={styles.statLabel}>{label}</Text>
+      </View>
+      <Text style={styles.statValue}>{value}</Text>
+    </View>
+  );
+}
+
+// --- Activity Item ---
+type RiskStatus = 'analyzing' | 'danger' | 'safe';
+
+function ActivityItem({
+  icon,
+  iconBg,
+  iconColor,
+  title,
+  date,
+  status,
+  statusLabel,
+  animateIcon,
+}: {
+  icon: keyof typeof MaterialIcons.glyphMap;
+  iconBg: string;
+  iconColor: string;
+  title: string;
+  date: string;
+  status: RiskStatus;
+  statusLabel: string;
+  animateIcon?: boolean;
+}) {
+  const badgeStyle =
+    status === 'danger'
+      ? styles.badgeDanger
+      : status === 'safe'
+        ? styles.badgeSafe
+        : styles.badgeAnalyzing;
+  const badgeText =
+    status === 'danger'
+      ? styles.badgeDangerText
+      : status === 'safe'
+        ? styles.badgeSafeText
+        : styles.badgeAnalyzingText;
+
+  return (
+    <TouchableOpacity style={styles.activityCard} activeOpacity={0.7}>
+      <View style={styles.activityLeft}>
+        <View style={[styles.activityIcon, { backgroundColor: iconBg }]}>
+          <MaterialIcons name={icon} size={20} color={iconColor} />
+        </View>
+        <View style={styles.activityInfo}>
+          <Text style={styles.activityTitle} numberOfLines={1}>
+            {title}
+          </Text>
+          <View style={styles.activityMeta}>
+            <Text style={styles.activityDate}>{date}</Text>
+            <View style={styles.dot} />
+            {status === 'analyzing' ? (
+              <Text style={styles.analyzingText}>{statusLabel}</Text>
+            ) : (
+              <View style={badgeStyle}>
+                <Text style={badgeText}>{statusLabel}</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </View>
+      {status !== 'analyzing' && (
+        <MaterialIcons name="chevron-right" size={24} color={Colors.stone300} />
+      )}
+    </TouchableOpacity>
+  );
+}
+
+// --- Main Screen ---
+export default function HomeScreen() {
+  const now = new Date();
+  const formattedDate = `${now.getMonth() + 1}월 ${now.getDate()}일 ${WEEKDAYS_KO[now.getDay()]}`;
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.logo}>
+            <Image
+              source={require('../../assets/favicon.png')}
+              style={styles.logoImage}
+              resizeMode='contain'
+            />
+          </View>
+          <Text style={styles.appName}>읽계</Text>
+        </View>
+        <TouchableOpacity style={styles.notifBtn}>
+          <MaterialIcons
+            name="notifications"
+            size={24}
+            color={Colors.stone600}
+          />
+          <View style={styles.notifDot} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Greeting */}
+        <View style={styles.greeting}>
+          <Text style={styles.dateText}>{formattedDate}</Text>
+          <Text style={styles.greetingMain}>
+            안녕하세요,{'\n'}
+            <Text style={styles.greetingName}>홍길동님!</Text>
+          </Text>
+        </View>
+
+        {/* Stat Cards */}
+        <View style={styles.statRow}>
+          <StatCard
+            icon="verified-user"
+            iconBg={Colors.green100}
+            iconColor={Colors.green600}
+            label="안전한 계약"
+            value={12}
+          />
+          <StatCard
+            icon="warning"
+            iconBg={Colors.red100}
+            iconColor={Colors.red600}
+            label="위험 요소 발견"
+            value={3}
+          />
+        </View>
+
+        {/* CTA Button */}
+        <TouchableOpacity style={styles.ctaButton} activeOpacity={0.85}>
+          <View style={styles.ctaIconBg}>
+            <MaterialIcons name="add" size={28} color={Colors.white} />
+          </View>
+          <Text style={styles.ctaTitle}>새 계약서 분석하기</Text>
+          <Text style={styles.ctaDesc}>
+            PDF나 이미지를 업로드하여 독소 조항을 즉시 확인해보세요.
+          </Text>
+          {/* Decorative background icon */}
+          <View style={styles.ctaBgIcon}>
+            <MaterialIcons
+              name="description"
+              size={160}
+              color="rgba(255,255,255,0.1)"
+            />
+          </View>
+        </TouchableOpacity>
+
+        {/* Recent Activity */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>최근 활동</Text>
+          <TouchableOpacity>
+            <Text style={styles.seeAll}>전체 보기</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.activityList}>
+          <ActivityItem
+            icon="sync"
+            iconBg={Colors.yellow50}
+            iconColor={Colors.primary}
+            title="용역_계약서_초안.pdf"
+            date="방금 전"
+            status="analyzing"
+            statusLabel="분석 중..."
+            animateIcon
+          />
+          <ActivityItem
+            icon="gavel"
+            iconBg={Colors.red50}
+            iconColor={Colors.red500}
+            title="비밀유지협약서_v2.docx"
+            date="어제"
+            status="danger"
+            statusLabel="2건 위험 발견"
+          />
+          <ActivityItem
+            icon="check-circle-outline"
+            iconBg={Colors.green50}
+            iconColor={Colors.green500}
+            title="디자인_용역_계약서.pdf"
+            date="10월 22일"
+            status="safe"
+            statusLabel="안전"
+          />
+        </View>
+
+        {/* Tip Card */}
+        <View style={styles.tipCard}>
+          <View style={styles.tipIcon}>
+            <MaterialIcons
+              name="tips-and-updates"
+              size={22}
+              color={Colors.primary}
+            />
+          </View>
+          <View style={styles.tipContent}>
+            <Text style={styles.tipTitle}>계약 꿀팁</Text>
+            <Text style={styles.tipText}>
+              독소 조항은 종종 "면책(Indemnification)" 섹션에 숨어 있습니다.
+              항상 두 번 검토하세요!
+            </Text>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+// --- Styles ---
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: Colors.backgroundLight,
+  },
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    paddingBottom: 12,
+    backgroundColor: Colors.backgroundLight,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  logo: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: '#F0F0F3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 30,
+    height: 30,
+  },
+  appName: {
+    fontWeight: '700',
+    fontSize: 20,
+    color: Colors.stone900,
+    letterSpacing: -0.5,
+  },
+  notifBtn: {
+    padding: 8,
+    borderRadius: BorderRadius.full,
+    position: 'relative',
+  },
+  notifDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#EF4444',
+    borderWidth: 2,
+    borderColor: Colors.backgroundLight,
+  },
+
+  // Scroll
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: 24,
+    paddingBottom: 32,
+  },
+
+  // Greeting
+  greeting: {
+    marginTop: 8,
+    marginBottom: 28,
+  },
+  dateText: {
+    color: Colors.stone500,
+    fontWeight: '500',
+    fontSize: FontSize.sm,
+    marginBottom: 4,
+  },
+  greetingMain: {
+    fontSize: FontSize['3xl'],
+    fontWeight: '700',
+    color: Colors.stone900,
+    lineHeight: 40,
+  },
+  greetingName: {
+    color: Colors.primaryDark,
+  },
+
+  // Stat Cards
+  statRow: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 28,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: Colors.white,
+    padding: 16,
+    borderRadius: BorderRadius.xl,
+    borderWidth: 1,
+    borderColor: Colors.stone100,
+  },
+  statHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  statIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: BorderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.stone500,
+  },
+  statValue: {
+    fontSize: FontSize['2xl'],
+    fontWeight: '700',
+    color: Colors.stone900,
+  },
+
+  // CTA
+  ctaButton: {
+    borderRadius: BorderRadius.xl,
+    padding: 24,
+    marginBottom: 32,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: Colors.accent,
+  },
+  ctaBgIcon: {
+    position: 'absolute',
+    right: -20,
+    top: -20,
+    transform: [{ rotate: '12deg' }],
+  },
+  ctaIconBg: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.lg,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  ctaTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: '700',
+    color: Colors.white,
+    marginBottom: 8,
+  },
+  ctaDesc: {
+    fontSize: FontSize.sm,
+    color: 'rgba(255,255,255,0.9)',
+    fontWeight: '500',
+    paddingRight: 48,
+    lineHeight: 18,
+  },
+
+  // Section Header
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.stone900,
+  },
+  seeAll: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.primaryDark,
+  },
+
+  // Activity
+  activityList: {
+    gap: 12,
+    marginBottom: 24,
+  },
+  activityCard: {
+    backgroundColor: Colors.white,
+    padding: 16,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.stone100,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  activityLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    flex: 1,
+  },
+  activityIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityInfo: {
+    flex: 1,
+  },
+  activityTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.stone900,
+    marginBottom: 2,
+  },
+  activityMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  activityDate: {
+    fontSize: FontSize.xs,
+    color: Colors.stone400,
+  },
+  dot: {
+    width: 3,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: Colors.stone300,
+  },
+  analyzingText: {
+    fontSize: FontSize.xs,
+    fontWeight: '500',
+    color: Colors.primaryDark,
+  },
+
+  // Badges
+  badgeDanger: {
+    backgroundColor: Colors.red100,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badgeDangerText: {
+    fontSize: FontSize.xs,
+    fontWeight: '500',
+    color: Colors.red800,
+  },
+  badgeSafe: {
+    backgroundColor: Colors.green100,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  badgeSafeText: {
+    fontSize: FontSize.xs,
+    fontWeight: '500',
+    color: Colors.green800,
+  },
+  badgeAnalyzing: {},
+  badgeAnalyzingText: {},
+
+  // Tip
+  tipCard: {
+    backgroundColor: Colors.secondary,
+    borderRadius: BorderRadius.xl,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 16,
+    borderWidth: 1,
+    borderColor: Colors.yellow100,
+  },
+  tipIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tipContent: {
+    flex: 1,
+  },
+  tipTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.stone900,
+    marginBottom: 4,
+  },
+  tipText: {
+    fontSize: FontSize.xs,
+    color: Colors.stone600,
+    lineHeight: 18,
+  },
+});
+
+
