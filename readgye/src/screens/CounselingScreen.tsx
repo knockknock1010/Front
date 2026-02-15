@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,9 +11,13 @@ import {
   Platform,
   KeyboardAvoidingView,
   Clipboard,
+  Modal,
+  Pressable,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors, FontSize } from '../constants/theme';
 import { useAuth, API_BASE_URL } from '../context/AuthContext';
 
@@ -23,6 +27,13 @@ type Message = {
   role: 'user' | 'assistant';
   content: string;
   created_at: string;
+};
+
+type ChatSessionItem = {
+  id: string;
+  title: string;
+  created_at: string;
+  document_id?: string | null;
 };
 
 // ─── 추천 질문 목록 ───
@@ -45,6 +56,17 @@ function formatTime(iso: string): string {
   return `${h >= 12 ? '오후' : '오전'} ${h > 12 ? h - 12 : h || 12}:${m}`;
 }
 
+function formatSessionDate(iso: string): string {
+  const trimmed = (iso || '').trim();
+  const hasTimezone = /([zZ]|[+\-]\d{2}:\d{2})$/.test(trimmed);
+  const parsed = hasTimezone ? trimmed : `${trimmed}Z`;
+  const d = new Date(parsed);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(
+    d.getDate(),
+  ).padStart(2, '0')} ${formatTime(parsed)}`;
+}
+
 // ─── 메인 컴포넌트 ───
 export default function CounselingScreen() {
   const { token } = useAuth();
@@ -52,8 +74,95 @@ export default function CounselingScreen() {
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<ChatSessionItem[]>([]);
+  const [isSessionModalVisible, setIsSessionModalVisible] = useState(false);
+  const [isSessionLoading, setIsSessionLoading] = useState(false);
+  const [isNewChatMode, setIsNewChatMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const flatListRef = useRef<FlatList>(null);
+
+  const fetchSessions = useCallback(async (): Promise<ChatSessionItem[]> => {
+    if (!token) return [];
+    try {
+      const sessionsRes = await fetch(`${API_BASE_URL}/api/chat/sessions`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!sessionsRes.ok) return [];
+
+      const raw = await sessionsRes.json();
+      if (!Array.isArray(raw)) return [];
+
+      const list: ChatSessionItem[] = raw
+        .filter((s: any) => s && s.id && s.created_at)
+        .map((s: any) => ({
+          id: String(s.id),
+          title: String(s.title || '새 상담'),
+          created_at: String(s.created_at),
+          document_id: s.document_id ? String(s.document_id) : null,
+        }));
+      setSessions(list);
+      return list;
+    } catch {
+      return [];
+    }
+  }, [token]);
+
+  const loadSessionMessages = useCallback(
+    async (targetSessionId: string) => {
+      if (!token || !targetSessionId) return;
+      setIsSessionLoading(true);
+      try {
+        const messagesRes = await fetch(
+          `${API_BASE_URL}/api/chat/sessions/${targetSessionId}/messages`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+        if (!messagesRes.ok) return;
+
+        const history = await messagesRes.json();
+        if (!Array.isArray(history)) return;
+
+        const restored: Message[] = history
+          .filter((m: any) => m && m.id && m.role && m.content && m.created_at)
+          .map((m: any) => ({
+            id: String(m.id),
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: String(m.content),
+            created_at: String(m.created_at),
+          }));
+
+        setSessionId(String(targetSessionId));
+        setMessages(restored);
+      } finally {
+        setIsSessionLoading(false);
+      }
+    },
+    [token],
+  );
+
+  const restoreLastSession = useCallback(async () => {
+    const list = await fetchSessions();
+    if (!list.length) return;
+    if (isNewChatMode) return;
+    if (!sessionId || messages.length === 0) {
+      await loadSessionMessages(list[0].id);
+    }
+  }, [fetchSessions, isNewChatMode, loadSessionMessages, messages.length, sessionId]);
+
+  useEffect(() => {
+    fetchSessions();
+  }, [fetchSessions]);
+
+  useFocusEffect(
+    useCallback(() => {
+      restoreLastSession();
+    }, [restoreLastSession]),
+  );
 
   // ─── 메시지 전송 ───
   const sendMessage = useCallback(
@@ -94,6 +203,8 @@ export default function CounselingScreen() {
 
         const data = await res.json();
         setSessionId(data.session_id);
+        setIsNewChatMode(false);
+        fetchSessions();
 
         const aiMsg: Message = {
           id: data.message.id,
@@ -117,13 +228,14 @@ export default function CounselingScreen() {
         setIsLoading(false);
       }
     },
-    [inputText, isLoading, sessionId, token],
+    [fetchSessions, inputText, isLoading, sessionId, token],
   );
 
   // ─── 새 대화 시작 ───
   const startNewChat = useCallback(() => {
     setMessages([]);
     setSessionId(null);
+    setIsNewChatMode(true);
     setError(null);
     setInputText('');
   }, []);
@@ -248,7 +360,16 @@ export default function CounselingScreen() {
           <MaterialIcons name="add" size={24} color={Colors.stone600} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>AI 법률 상담</Text>
-        <View style={styles.headerSpacer} />
+        <TouchableOpacity
+          style={styles.headerButton}
+          activeOpacity={0.8}
+          onPress={async () => {
+            await fetchSessions();
+            setIsSessionModalVisible(true);
+          }}
+        >
+          <MaterialIcons name="history" size={22} color={Colors.stone600} />
+        </TouchableOpacity>
       </View>
 
       {/* ─── 면책 안내 ─── */}
@@ -258,6 +379,38 @@ export default function CounselingScreen() {
           읽계 AI의 분석 결과는 법적 효력이 없으며, 참고용으로만 활용해 주세요.
           정확한 판단은 변호사와의 상담을 권장합니다.
         </Text>
+      </View>
+
+      <View style={styles.sessionStrip}>
+        <Text style={styles.sessionStripTitle}>최근 세션</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.sessionStripScroll}
+        >
+          {sessions.length === 0 ? (
+            <Text style={styles.sessionStripEmpty}>아직 저장된 세션이 없습니다.</Text>
+          ) : (
+            sessions.map((s) => (
+              <TouchableOpacity
+                key={s.id}
+                style={[
+                  styles.sessionChip,
+                  sessionId === s.id && styles.sessionChipActive,
+                ]}
+                onPress={async () => {
+                  await loadSessionMessages(s.id);
+                  setIsNewChatMode(false);
+                }}
+              >
+                <Text style={styles.sessionChipTitle} numberOfLines={1}>
+                  {s.title || '새 상담'}
+                </Text>
+                <Text style={styles.sessionChipTime}>{formatTime(s.created_at)}</Text>
+              </TouchableOpacity>
+            ))
+          )}
+        </ScrollView>
       </View>
 
       {/* ─── 에러 배너 ─── */}
@@ -323,6 +476,67 @@ export default function CounselingScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={isSessionModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsSessionModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setIsSessionModalVisible(false)}
+        />
+        <View style={styles.modalCard}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>대화 세션</Text>
+            <TouchableOpacity onPress={() => setIsSessionModalVisible(false)}>
+              <MaterialIcons name="close" size={20} color={Colors.stone500} />
+            </TouchableOpacity>
+          </View>
+          <TouchableOpacity
+            style={styles.newSessionBtn}
+            onPress={() => {
+              startNewChat();
+              setIsSessionModalVisible(false);
+            }}
+          >
+            <MaterialIcons name="add-comment" size={16} color="#0f49bd" />
+            <Text style={styles.newSessionText}>새 상담 시작</Text>
+          </TouchableOpacity>
+          <ScrollView style={styles.sessionList}>
+            {sessions.length === 0 ? (
+              <Text style={styles.emptySessionText}>저장된 세션이 없습니다.</Text>
+            ) : (
+              sessions.map((s) => (
+                <TouchableOpacity
+                  key={s.id}
+                  style={[
+                    styles.sessionItem,
+                    sessionId === s.id && styles.sessionItemActive,
+                  ]}
+                  onPress={async () => {
+                    await loadSessionMessages(s.id);
+                    setIsNewChatMode(false);
+                    setIsSessionModalVisible(false);
+                  }}
+                >
+                  <Text style={styles.sessionTitle} numberOfLines={1}>
+                    {s.title || '새 상담'}
+                  </Text>
+                  <Text style={styles.sessionMeta}>{formatSessionDate(s.created_at)}</Text>
+                </TouchableOpacity>
+              ))
+            )}
+          </ScrollView>
+          {isSessionLoading && (
+            <View style={styles.sessionLoading}>
+              <ActivityIndicator size="small" color="#0f49bd" />
+              <Text style={styles.sessionLoadingText}>세션 불러오는 중...</Text>
+            </View>
+          )}
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -356,6 +570,91 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
   },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  modalCard: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    top: '18%',
+    bottom: '18%',
+    backgroundColor: Colors.white,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: Colors.stone100,
+    padding: 14,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.stone900,
+  },
+  newSessionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#EEF4FF',
+    marginBottom: 10,
+  },
+  newSessionText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0f49bd',
+  },
+  sessionList: {
+    flex: 1,
+  },
+  sessionItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.stone100,
+    marginBottom: 8,
+    backgroundColor: Colors.white,
+  },
+  sessionItemActive: {
+    borderColor: '#9DBAF4',
+    backgroundColor: '#F5F9FF',
+  },
+  sessionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.stone800,
+  },
+  sessionMeta: {
+    marginTop: 3,
+    fontSize: 11,
+    color: Colors.stone400,
+  },
+  emptySessionText: {
+    fontSize: 13,
+    color: Colors.stone500,
+    textAlign: 'center',
+    marginTop: 24,
+  },
+  sessionLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  sessionLoadingText: {
+    fontSize: 12,
+    color: Colors.stone500,
+  },
   // 면책
   disclaimerWrap: {
     marginHorizontal: 20,
@@ -372,6 +671,51 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.stone500,
     lineHeight: 18,
+  },
+  sessionStrip: {
+    marginHorizontal: 16,
+    marginBottom: 8,
+    gap: 6,
+  },
+  sessionStripTitle: {
+    fontSize: 12,
+    color: Colors.stone500,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  sessionStripScroll: {
+    paddingHorizontal: 2,
+    gap: 8,
+  },
+  sessionStripEmpty: {
+    fontSize: 12,
+    color: Colors.stone400,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  sessionChip: {
+    minWidth: 110,
+    maxWidth: 170,
+    borderWidth: 1,
+    borderColor: Colors.stone100,
+    borderRadius: 10,
+    backgroundColor: Colors.white,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+  },
+  sessionChipActive: {
+    borderColor: '#9DBAF4',
+    backgroundColor: '#F5F9FF',
+  },
+  sessionChipTitle: {
+    fontSize: 12,
+    color: Colors.stone600,
+    fontWeight: '600',
+  },
+  sessionChipTime: {
+    marginTop: 2,
+    fontSize: 10,
+    color: Colors.stone400,
   },
   // 에러
   errorBanner: {
