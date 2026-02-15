@@ -8,7 +8,7 @@ WebBrowser.maybeCompleteAuthSession();
 const GOOGLE_WEB_CLIENT_ID = '333280411085-vlut8smanu3gk36s4g3p9n253erjult5.apps.googleusercontent.com';
 const GOOGLE_IOS_CLIENT_ID = '333280411085-2fbvg1bhtukco7bqnq2hddm7gcfh743i.apps.googleusercontent.com';
 const GOOGLE_ANDROID_CLIENT_ID = 'YOUR_ANDROID_CLIENT_ID_HERE'; // TODO: Google Cloud Console에서 생성 후 교체
-export const API_BASE_URL = 'http://localhost:8000';
+export const API_BASE_URL = 'https://back-production-e1e1.up.railway.app';
 
 export type UserInfo = {
   id: string;
