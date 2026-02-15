@@ -15,6 +15,8 @@ import FAQScreen from '../screens/FAQScreen';
 import ContactScreen from '../screens/ContactScreen';
 import TermsScreen from '../screens/TermsScreen';
 import OpenSourceScreen from '../screens/OpenSourceScreen';
+import MembershipScreen from '../screens/MembershipScreen';
+import PaymentMethodScreen from '../screens/PaymentMethodScreen';
 import UploadScreen from '../screens/UploadScreen';
 import AnalysisResultScreen from '../screens/AnalysisResultScreen';
 import { Colors, FontSize } from '../constants/theme';
@@ -48,6 +50,8 @@ function SettingsStackNavigator() {
       <SettingsStack.Screen name="Contact" component={ContactScreen} />
       <SettingsStack.Screen name="Terms" component={TermsScreen} />
       <SettingsStack.Screen name="OpenSource" component={OpenSourceScreen} />
+      <SettingsStack.Screen name="Membership" component={MembershipScreen} />
+      <SettingsStack.Screen name="PaymentMethod" component={PaymentMethodScreen} />
     </SettingsStack.Navigator>
   );
 }

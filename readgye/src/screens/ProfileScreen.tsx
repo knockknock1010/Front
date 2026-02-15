@@ -105,8 +105,9 @@ export default function ProfileScreen() {
               icon="workspace-premium"
               label="현재 플랜: 프리미엄 (매월)"
               showDivider
+              onPress={() => navigation.navigate('Membership')}
             />
-            <SettingRow icon="credit-card" label="결제 수단 관리" />
+            <SettingRow icon="credit-card" label="결제 수단 관리" onPress={() => navigation.navigate('PaymentMethod')} />
           </View>
         </View>
 
