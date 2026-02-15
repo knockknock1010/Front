@@ -35,7 +35,11 @@ const SUGGESTED_QUESTIONS = [
 
 // ─── 시간 포맷 ───
 function formatTime(iso: string): string {
-  const d = new Date(iso);
+  const trimmed = (iso || '').trim();
+  const hasTimezone = /([zZ]|[+\-]\d{2}:\d{2})$/.test(trimmed);
+  const parsed = hasTimezone ? trimmed : `${trimmed}Z`;
+  const d = new Date(parsed);
+  if (Number.isNaN(d.getTime())) return '';
   const h = d.getHours();
   const m = d.getMinutes().toString().padStart(2, '0');
   return `${h >= 12 ? '오후' : '오전'} ${h > 12 ? h - 12 : h || 12}:${m}`;
