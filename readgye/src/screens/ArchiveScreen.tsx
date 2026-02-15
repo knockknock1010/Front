@@ -1,6 +1,8 @@
 ﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -136,6 +138,51 @@ export default function ArchiveScreen() {
     }
   }, [token]);
 
+  const handleDelete = useCallback(
+    (docId: string, docTitle: string) => {
+      const doDelete = async () => {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/analyze/${docId}`, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!res.ok) {
+            const err = await res.json().catch(() => null);
+            throw new Error(err?.detail || '문서를 삭제하지 못했습니다.');
+          }
+
+          setDocuments((prev) => prev.filter((doc) => doc.id !== docId));
+        } catch (e) {
+          const message = e instanceof Error ? e.message : '문서를 삭제하지 못했습니다.';
+          if (Platform.OS === 'web') {
+            window.alert(`삭제 실패\n\n${message}`);
+          } else {
+            Alert.alert('삭제 실패', message);
+          }
+        }
+      };
+
+      if (Platform.OS === 'web') {
+        if (window.confirm(`"${docTitle}" 문서를 삭제하시겠습니까?\n\n삭제된 문서는 복구할 수 없습니다.`)) {
+          doDelete();
+        }
+      } else {
+        Alert.alert(
+          '문서 삭제',
+          `"${docTitle}" 문서를 삭제하시겠습니까?\n삭제된 문서는 복구할 수 없습니다.`,
+          [
+            { text: '취소', style: 'cancel' },
+            { text: '삭제', style: 'destructive', onPress: doDelete },
+          ],
+        );
+      }
+    },
+    [token],
+  );
+
   useEffect(() => {
     if (isFocused) {
       fetchDocuments();
@@ -246,6 +293,14 @@ export default function ArchiveScreen() {
 
                   <View style={styles.cardActions}>
                     <Text style={styles.riskText}>위험 {doc.riskCount}건</Text>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      onPress={() => handleDelete(doc.id, doc.title)}
+                    >
+                      <MaterialIcons name="delete-outline" size={18} color={Colors.red500} />
+                    </TouchableOpacity>
                     <MaterialIcons name="chevron-right" size={18} color={Colors.stone400} />
                   </View>
                 </View>
@@ -413,6 +468,9 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     color: Colors.stone500,
     fontWeight: '700',
+  },
+  deleteButton: {
+    padding: 4,
   },
   emptyWrap: {
     paddingVertical: 32,

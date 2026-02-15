@@ -7,6 +7,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 const GOOGLE_WEB_CLIENT_ID = '333280411085-vlut8smanu3gk36s4g3p9n253erjult5.apps.googleusercontent.com';
 const GOOGLE_IOS_CLIENT_ID = '333280411085-2fbvg1bhtukco7bqnq2hddm7gcfh743i.apps.googleusercontent.com';
+const GOOGLE_ANDROID_CLIENT_ID = 'YOUR_ANDROID_CLIENT_ID_HERE'; // TODO: Google Cloud Console에서 생성 후 교체
 export const API_BASE_URL = 'http://localhost:8000';
 
 export type UserInfo = {
@@ -59,6 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: GOOGLE_WEB_CLIENT_ID,
     iosClientId: GOOGLE_IOS_CLIENT_ID,
+    androidClientId: GOOGLE_ANDROID_CLIENT_ID,
     webClientId: GOOGLE_WEB_CLIENT_ID,
   });
 
@@ -144,6 +146,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setUser(userData);
       await AsyncStorage.setItem('user', JSON.stringify(userData));
+
+      // Google 로그인 후 백엔드에도 회원가입/로그인하여 JWT 토큰 획득
+      const googlePassword = `google_${userInfo.id}`;
+      await loginToBackend(userInfo.email, googlePassword, userInfo.name);
     } catch (e) {
       console.log('Failed to fetch user info', e);
     }

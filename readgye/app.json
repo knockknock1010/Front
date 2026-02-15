@@ -15,7 +15,16 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.readgye"
+      "bundleIdentifier": "com.anonymous.readgye",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": [
+              "com.googleusercontent.apps.333280411085-2fbvg1bhtukco7bqnq2hddm7gcfh743i"
+            ]
+          }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
