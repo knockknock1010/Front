@@ -21,9 +21,10 @@ type ClauseResult = {
   clause_number: string;
   title: string;
   original_text?: string;
-  risk_level: 'HIGH' | 'MEDIUM' | 'LOW' | string;
+  risk_level: 'HIGH' | 'MODERATE' | 'MEDIUM' | 'LOW' | string;
   summary: string;
   suggestion: string;
+  legal_basis?: string;
 };
 
 export default function AnalysisResultScreen({ route, navigation }: Props) {
@@ -62,43 +63,35 @@ export default function AnalysisResultScreen({ route, navigation }: Props) {
     }
   };
 
+  // MODERATE와 MEDIUM 모두 "주의"로 처리
+  const isWarning = (level: string) => level === 'MODERATE' || level === 'MEDIUM';
+
   // 위험도별 카운트
   const highCount = clauses.filter((c) => c.risk_level === 'HIGH').length;
-  const mediumCount = clauses.filter((c) => c.risk_level === 'MEDIUM').length;
+  const moderateCount = clauses.filter((c) => isWarning(c.risk_level)).length;
   const lowCount = clauses.filter((c) => c.risk_level === 'LOW').length;
 
   // 위험도 색상
   const getRiskColor = (level: string) => {
-    switch (level) {
-      case 'HIGH':
-        return { bg: Colors.red50, border: Colors.red100, text: Colors.red600, icon: Colors.red500 };
-      case 'MEDIUM':
-        return { bg: Colors.yellow50, border: Colors.yellow100, text: Colors.primaryDark, icon: Colors.accent };
-      default:
-        return { bg: Colors.green50, border: Colors.green100, text: Colors.green600, icon: Colors.green500 };
+    if (level === 'HIGH') {
+      return { bg: Colors.red50, border: Colors.red100, text: Colors.red600, icon: Colors.red500 };
     }
+    if (isWarning(level)) {
+      return { bg: Colors.yellow50, border: Colors.yellow100, text: Colors.primaryDark, icon: Colors.accent };
+    }
+    return { bg: Colors.green50, border: Colors.green100, text: Colors.green600, icon: Colors.green500 };
   };
 
   const getRiskLabel = (level: string) => {
-    switch (level) {
-      case 'HIGH':
-        return '위험';
-      case 'MEDIUM':
-        return '주의';
-      default:
-        return '안전';
-    }
+    if (level === 'HIGH') return '위험';
+    if (isWarning(level)) return '주의';
+    return '안전';
   };
 
   const getRiskIcon = (level: string): keyof typeof MaterialIcons.glyphMap => {
-    switch (level) {
-      case 'HIGH':
-        return 'error';
-      case 'MEDIUM':
-        return 'warning';
-      default:
-        return 'check-circle';
-    }
+    if (level === 'HIGH') return 'error';
+    if (isWarning(level)) return 'warning';
+    return 'check-circle';
   };
 
   return (
@@ -152,7 +145,7 @@ export default function AnalysisResultScreen({ route, navigation }: Props) {
             </View>
             <View style={[styles.summaryCard, { backgroundColor: Colors.yellow50 }]}>
               <MaterialIcons name="warning" size={20} color={Colors.accent} />
-              <Text style={[styles.summaryCount, { color: Colors.primaryDark }]}>{mediumCount}</Text>
+              <Text style={[styles.summaryCount, { color: Colors.primaryDark }]}>{moderateCount}</Text>
               <Text style={styles.summaryLabel}>주의</Text>
             </View>
             <View style={[styles.summaryCard, { backgroundColor: Colors.green50 }]}>
@@ -201,6 +194,14 @@ export default function AnalysisResultScreen({ route, navigation }: Props) {
                   <View style={styles.clauseSection}>
                     <Text style={styles.clauseSectionLabel}>분석 요약</Text>
                     <Text style={styles.clauseSectionText}>{clause.summary}</Text>
+                  </View>
+                ) : null}
+
+                {/* 법적 근거 */}
+                {clause.legal_basis ? (
+                  <View style={[styles.clauseSection, styles.legalBasisSection]}>
+                    <MaterialIcons name="gavel" size={14} color={Colors.primaryDark} />
+                    <Text style={styles.legalBasisText}>{clause.legal_basis}</Text>
                   </View>
                 ) : null}
 
@@ -412,6 +413,21 @@ const styles = StyleSheet.create({
     color: Colors.stone500,
     lineHeight: 18,
     fontStyle: 'italic',
+  },
+  legalBasisSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  legalBasisText: {
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    color: Colors.primaryDark,
+    flex: 1,
   },
   suggestionSection: {
     backgroundColor: Colors.stone50,

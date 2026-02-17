@@ -17,6 +17,23 @@ import { API_BASE_URL, useAuth } from '../context/AuthContext';
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 24 * 2 - 16) / 2;
 const WEEKDAYS_KO = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
+const CONTRACT_TIPS = [
+  '계약 기간 시작일과 종료일을 정확히 확인하고 자동 연장 조건을 체크하세요.',
+  '위약금 조항은 금액뿐 아니라 산정 방식까지 확인해야 분쟁을 줄일 수 있습니다.',
+  '구두 합의 내용은 효력이 약하므로 중요한 사항은 반드시 계약서에 명시하세요.',
+  '해지 사유와 해지 절차가 구체적일수록 불리한 일방 해지를 막을 수 있습니다.',
+  '손해배상 책임 범위가 과도하지 않은지, 상한선이 있는지 확인하세요.',
+  '지급 조건은 날짜, 방식, 지연 시 이자까지 포함해 명확히 적어두는 것이 좋습니다.',
+  '업무 범위(Scope)가 모호하면 추가 요구가 생기기 쉬우니 세부 항목을 구체화하세요.',
+  '지식재산권 귀속 조항은 결과물 소유권과 사용권을 나눠서 검토하세요.',
+  '비밀유지 조항의 기간과 예외 사유를 확인해 과도한 제한을 피하세요.',
+  '관할 법원 및 준거법 조항은 분쟁 발생 시 비용과 시간에 큰 영향을 줍니다.',
+  '검수 기준과 승인 기한을 정해두면 완료 여부를 명확히 판단할 수 있습니다.',
+  '재위탁(하도급) 허용 여부를 확인해 예상치 못한 제3자 개입을 방지하세요.',
+  '면책 조항이 상대방에만 유리하게 구성되지 않았는지 꼭 확인하세요.',
+  '변경 계약(추가 합의)은 서면으로 남기고 원계약과의 우선순위를 정해두세요.',
+  '계약서에 첨부 문서가 있다면 본문과 충돌 여부를 함께 검토하세요.',
+] as const;
 
 type ApiDocument = {
   id: string;
@@ -135,13 +152,17 @@ function ActivityItem({
 
 // --- Main Screen ---
 export default function HomeScreen() {
-  const { user, token } = useAuth();
+  const { user, token, unreadNotificationCount } = useAuth();
   const navigation = useNavigation<any>();
   const isFocused = useIsFocused();
   const now = new Date();
   const formattedDate = `${now.getMonth() + 1}월 ${now.getDate()}일 ${WEEKDAYS_KO[now.getDay()]}`;
 
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [contractTip, setContractTip] = useState<string>(() => {
+    const initialIndex = Math.floor(Math.random() * CONTRACT_TIPS.length);
+    return CONTRACT_TIPS[initialIndex];
+  });
 
   const formatDate = useCallback((dateString: string) => {
     const date = new Date(dateString);
@@ -213,6 +234,8 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (isFocused) {
+      const randomIndex = Math.floor(Math.random() * CONTRACT_TIPS.length);
+      setContractTip(CONTRACT_TIPS[randomIndex]);
       loadRecentActivities();
     }
   }, [isFocused, loadRecentActivities]);
@@ -255,9 +278,12 @@ export default function HomeScreen() {
               resizeMode="contain"
             />
           </View>
-          <TouchableOpacity style={styles.notifBtn}>
+          <TouchableOpacity
+            style={styles.notifBtn}
+            onPress={() => navigation.navigate('NotificationList')}
+          >
             <MaterialIcons name="notifications" size={24} color={Colors.stone600} />
-            <View style={styles.notifDot} />
+            {unreadNotificationCount > 0 ? <View style={styles.notifDot} /> : null}
           </TouchableOpacity>
         </View>
 
@@ -338,10 +364,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.tipContent}>
             <Text style={styles.tipTitle}>계약 꿀팁</Text>
-            <Text style={styles.tipText}>
-              독소 조항은 종종 "면책(Indemnification)" 섹션에 숨어 있습니다.
-              항상 두 번 검토하세요!
-            </Text>
+            <Text style={styles.tipText}>{contractTip}</Text>
           </View>
         </View>
       </ScrollView>

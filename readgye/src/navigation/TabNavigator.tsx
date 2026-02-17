@@ -18,6 +18,7 @@ import MembershipScreen from '../screens/MembershipScreen';
 import PaymentMethodScreen from '../screens/PaymentMethodScreen';
 import UploadScreen from '../screens/UploadScreen';
 import AnalysisResultScreen from '../screens/AnalysisResultScreen';
+import NotificationListScreen from '../screens/NotificationListScreen';
 import { Colors, FontSize } from '../constants/theme';
 
 const Tab = createBottomTabNavigator();
@@ -30,6 +31,7 @@ function HomeStackNavigator() {
   return (
     <HomeStack.Navigator screenOptions={{ headerShown: false }}>
       <HomeStack.Screen name="HomeMain" component={HomeScreen} />
+      <HomeStack.Screen name="NotificationList" component={NotificationListScreen} />
       <HomeStack.Screen name="Upload" component={UploadScreen} />
       <HomeStack.Screen name="AnalysisResult" component={AnalysisResultScreen} />
     </HomeStack.Navigator>

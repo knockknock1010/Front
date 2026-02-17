@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   KeyboardAvoidingView,
+  Keyboard,
   Clipboard,
   Modal,
   Pressable,
@@ -163,6 +164,17 @@ export default function CounselingScreen() {
       restoreLastSession();
     }, [restoreLastSession]),
   );
+
+  // ─── 키보드 표시 시 스크롤 맨 아래로 ───
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const sub = Keyboard.addListener(showEvent, () => {
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: true });
+      }, 100);
+    });
+    return () => sub.remove();
+  }, []);
 
   // ─── 메시지 전송 ───
   const sendMessage = useCallback(
@@ -349,7 +361,7 @@ export default function CounselingScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* ─── 헤더 ─── */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -424,8 +436,8 @@ export default function CounselingScreen() {
       {/* ─── 채팅 영역 ─── */}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={0}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {messages.length === 0 ? (
           renderEmptyState()

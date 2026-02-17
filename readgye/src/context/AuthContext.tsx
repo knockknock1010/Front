@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert, Platform } from 'react-native';
 
 const GOOGLE_WEB_CLIENT_ID = '333280411085-vlut8smanu3gk36s4g3p9n253erjult5.apps.googleusercontent.com';
 export const API_BASE_URL = 'https://back-production-e1e1.up.railway.app';
@@ -58,11 +59,21 @@ export type BackendProfile = {
   name: string;
 };
 
+type BackendNotification = {
+  id: string;
+  title: string;
+  message: string;
+  created_at: string;
+  is_read: boolean;
+  document_id?: string | null;
+};
+
 type AuthContextType = {
   user: UserInfo | null;
   token: string | null;
   isLoading: boolean;
   isGoogleSignInAvailable: boolean;
+  unreadNotificationCount: number;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signUpWithEmail: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string }>;
@@ -76,6 +87,7 @@ const AuthContext = createContext<AuthContextType>({
   token: null,
   isLoading: true,
   isGoogleSignInAvailable: false,
+  unreadNotificationCount: 0,
   signInWithGoogle: async () => {},
   signInWithEmail: async () => ({ success: false }),
   signUpWithEmail: async () => ({ success: false }),
@@ -92,10 +104,79 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserInfo | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const pollingLockRef = useRef(false);
 
   useEffect(() => {
     loadUser();
   }, []);
+
+  const showAppAlert = useCallback((title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      const webAlert = (globalThis as { alert?: (msg: string) => void }).alert;
+      if (typeof webAlert === 'function') {
+        webAlert(`${title}\n\n${message}`);
+      }
+      return;
+    }
+    Alert.alert(title, message);
+  }, []);
+
+  const markAllNotificationsAsRead = useCallback(async (accessToken: string) => {
+    await fetch(`${API_BASE_URL}/api/notifications/read-all`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  }, []);
+
+  const pollUnreadNotifications = useCallback(async () => {
+    if (!token || pollingLockRef.current) {
+      return;
+    }
+
+    pollingLockRef.current = true;
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/notifications/unread`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        setUnreadNotificationCount(0);
+        return;
+      }
+
+      const notifications: BackendNotification[] = await res.json();
+      setUnreadNotificationCount(notifications.length);
+      if (notifications.length === 0) {
+        return;
+      }
+      if (notifications.length === 1) {
+        showAppAlert(notifications[0].title, notifications[0].message);
+      } else {
+        showAppAlert('분석 완료', `${notifications.length}건의 계약서 분석이 완료되었습니다.`);
+      }
+
+      await markAllNotificationsAsRead(token);
+      setUnreadNotificationCount(0);
+    } catch (e) {
+      console.log('Failed to poll notifications', e);
+    } finally {
+      pollingLockRef.current = false;
+    }
+  }, [markAllNotificationsAsRead, showAppAlert, token]);
+
+  useEffect(() => {
+    if (!token) {
+      setUnreadNotificationCount(0);
+      return;
+    }
+
+    pollUnreadNotifications();
+    const timer = setInterval(() => {
+      pollUnreadNotifications();
+    }, 8000);
+
+    return () => clearInterval(timer);
+  }, [pollUnreadNotifications, token]);
 
   // 백엔드 회원가입 + 로그인을 수행하여 JWT 토큰 획득
   const loginToBackend = async (email: string, password: string, name: string) => {
@@ -271,6 +352,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     setUser(null);
     setToken(null);
+    setUnreadNotificationCount(0);
     await AsyncStorage.removeItem('user');
     await AsyncStorage.removeItem('backendToken');
   };
@@ -304,6 +386,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         token,
         isLoading,
         isGoogleSignInAvailable,
+        unreadNotificationCount,
         signInWithGoogle,
         signInWithEmail,
         signUpWithEmail,
