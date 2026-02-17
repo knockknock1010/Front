@@ -83,8 +83,13 @@ export default function AnalysisResultScreen({ route, navigation }: Props) {
   // MODERATE와 MEDIUM 모두 "주의"로 처리
   const isWarning = (level: string) => level === 'MODERATE' || level === 'MEDIUM';
 
+  // 종합 분석 결과 판별
+  const isSummaryClause = (c: ClauseResult) =>
+    c.clause_number === '종합 분석 결과' || c.clause_number === '부동산 종합 분석';
+
   // 위험도별 카운트 (종합 분석 결과 제외)
-  const regularClauses = clauses.filter((c) => c.clause_number !== '종합 분석 결과');
+  const regularClauses = clauses.filter((c) => !isSummaryClause(c));
+  const summaryClauses = clauses.filter((c) => isSummaryClause(c));
   const highCount = regularClauses.filter((c) => c.risk_level === 'HIGH').length;
   const moderateCount = regularClauses.filter((c) => isWarning(c.risk_level)).length;
   const lowCount = regularClauses.filter((c) => c.risk_level === 'LOW').length;
@@ -173,12 +178,10 @@ export default function AnalysisResultScreen({ route, navigation }: Props) {
             </View>
           </View>
 
-          {/* 조항별 결과 (종합 분석 결과는 맨 아래로) */}
-          {(() => {
-            const regular = clauses.filter((c) => c.clause_number !== '종합 분석 결과');
-            const summary = clauses.filter((c) => c.clause_number === '종합 분석 결과');
-            return (<><Text style={styles.sectionTitle}>조항별 분석 ({regular.length}건)</Text>
-            {[...regular, ...summary].map((clause, index) => {
+          {/* 조항별 결과 */}
+          <Text style={styles.sectionTitle}>조항별 분석 ({regularClauses.length}건)</Text>
+
+          {regularClauses.map((clause, index) => {
             const color = getRiskColor(clause.risk_level);
             return (
               <View
@@ -236,8 +239,29 @@ export default function AnalysisResultScreen({ route, navigation }: Props) {
             );
           })}
 
-          </>);
-          })()}
+          {/* 종합 분석 결과 (별도 스타일) */}
+          {summaryClauses.map((clause, index) => (
+            <View key={`summary-${index}`} style={styles.summaryClauseCard}>
+              <View style={styles.summaryClauseHeader}>
+                <MaterialIcons name="assignment" size={20} color={Colors.stone600} />
+                <Text style={styles.summaryClauseTitle}>{clause.clause_number}</Text>
+              </View>
+              <Text style={styles.summaryClauseSubtitle}>{clause.title}</Text>
+
+              {clause.summary ? (
+                <View style={styles.summaryClauseBody}>
+                  <Text style={styles.summaryClauseText}>{clause.summary}</Text>
+                </View>
+              ) : null}
+
+              {clause.suggestion ? (
+                <View style={styles.summaryClauseSuggestion}>
+                  <Text style={styles.clauseSectionLabel}>종합 의견</Text>
+                  <Text style={styles.summaryClauseText}>{clause.suggestion}</Text>
+                </View>
+              ) : null}
+            </View>
+          ))}
 
           {clauses.length === 0 && (
             <View style={styles.emptyWrap}>
@@ -467,6 +491,51 @@ const styles = StyleSheet.create({
   clauseSectionText: {
     fontSize: FontSize.sm,
     color: Colors.stone800,
+    lineHeight: 20,
+  },
+
+  // 종합 분석 결과 카드
+  summaryClauseCard: {
+    backgroundColor: Colors.stone50,
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: Colors.stone200,
+  },
+  summaryClauseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  summaryClauseTitle: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.stone700,
+  },
+  summaryClauseSubtitle: {
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.stone500,
+    marginBottom: 12,
+    marginLeft: 28,
+  },
+  summaryClauseBody: {
+    backgroundColor: Colors.white,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+  },
+  summaryClauseSuggestion: {
+    backgroundColor: Colors.white,
+    borderRadius: 10,
+    padding: 12,
+  },
+  summaryClauseText: {
+    fontSize: FontSize.sm,
+    color: Colors.stone600,
     lineHeight: 20,
   },
 

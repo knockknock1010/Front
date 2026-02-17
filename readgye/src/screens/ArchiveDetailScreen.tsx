@@ -21,132 +21,28 @@ type ArchiveStackParamList = {
   ArchiveDetail: { documentId: string; title: string };
 };
 
-type AnalysisItem = {
+type ClauseResult = {
   clause_number: string;
   title: string;
-  risk_level: 'HIGH' | 'MEDIUM' | 'LOW' | 'UNKNOWN';
+  original_text?: string;
+  risk_level: 'HIGH' | 'MODERATE' | 'MEDIUM' | 'LOW' | string;
   summary: string;
   suggestion: string;
+  legal_basis?: string;
 };
 
 type AnalysisResult = {
   filename: string;
-  analysis: AnalysisItem[];
+  analysis: ClauseResult[];
 };
-
-type LegacyPayload = {
-  clauses?: Array<{
-    clause_number?: string;
-    article_number?: string;
-    title?: string;
-    risk_level?: string;
-    summary?: string;
-    analysis?: string;
-    suggestion?: string;
-    original_text?: string;
-  }>;
-};
-
-function normalizeRiskLevel(level?: string): AnalysisItem['risk_level'] {
-  if (level === 'HIGH' || level === 'MEDIUM' || level === 'LOW') {
-    return level;
-  }
-  return 'UNKNOWN';
-}
-
-function toText(value: unknown) {
-  return typeof value === 'string' ? value : '';
-}
-
-function parseLegacyPayload(rawText: string): LegacyPayload | null {
-  const text = rawText.trim();
-  if (!text || !text.startsWith('{')) {
-    return null;
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    // 과거 저장 데이터 중 Python dict 문자열 형태를 최대한 복원한다.
-    const normalized = text
-      .replace(/\bTrue\b/g, 'true')
-      .replace(/\bFalse\b/g, 'false')
-      .replace(/\bNone\b/g, 'null')
-      .replace(/'/g, '"');
-
-    try {
-      return JSON.parse(normalized);
-    } catch {
-      return null;
-    }
-  }
-}
-
-function mapLegacyClauses(payload: LegacyPayload): AnalysisItem[] {
-  if (!Array.isArray(payload.clauses)) {
-    return [];
-  }
-
-  return payload.clauses.map((clause, index) => ({
-    clause_number: toText(clause.clause_number || clause.article_number) || `조항 ${index + 1}`,
-    title: toText(clause.title) || '제목 없음',
-    risk_level: normalizeRiskLevel(clause.risk_level),
-    summary: toText(clause.summary || clause.analysis || clause.original_text),
-    suggestion: toText(clause.suggestion),
-  }));
-}
-
-function normalizeAnalysis(items: AnalysisItem[]): AnalysisItem[] {
-  const normalized: AnalysisItem[] = [];
-
-  for (const item of items) {
-    const legacyFromSummary = parseLegacyPayload(item.summary);
-    if (legacyFromSummary) {
-      const parsed = mapLegacyClauses(legacyFromSummary);
-      if (parsed.length > 0) {
-        normalized.push(...parsed);
-        continue;
-      }
-    }
-
-    const legacyFromSuggestion = parseLegacyPayload(item.suggestion);
-    if (legacyFromSuggestion) {
-      const parsed = mapLegacyClauses(legacyFromSuggestion);
-      if (parsed.length > 0) {
-        normalized.push(...parsed);
-        continue;
-      }
-    }
-
-    normalized.push({
-      ...item,
-      risk_level: normalizeRiskLevel(item.risk_level),
-    });
-  }
-
-  return normalized;
-}
-
-function riskLabel(level: AnalysisItem['risk_level']) {
-  if (level === 'HIGH') return '높음';
-  if (level === 'MEDIUM') return '중간';
-  if (level === 'LOW') return '낮음';
-  return '미분류';
-}
-
-function riskBadgeStyle(level: AnalysisItem['risk_level']) {
-  if (level === 'HIGH') return styles.badgeHigh;
-  if (level === 'MEDIUM') return styles.badgeMedium;
-  if (level === 'LOW') return styles.badgeLow;
-  return styles.badgeUnknown;
-}
 
 export default function ArchiveDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<ArchiveStackParamList, 'ArchiveDetail'>>();
   const route = useRoute<RouteProp<ArchiveStackParamList, 'ArchiveDetail'>>();
   const { token } = useAuth();
 
-  const [data, setData] = useState<AnalysisResult | null>(null);
+  const [clauses, setClauses] = useState<ClauseResult[]>([]);
+  const [filename, setFilename] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -155,11 +51,7 @@ export default function ArchiveDetailScreen() {
     setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/api/analyze/${route.params.documentId}/result`, {
-        headers: token
-          ? {
-              Authorization: `Bearer ${token}`,
-            }
-          : undefined,
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
       });
 
       if (!res.ok) {
@@ -168,13 +60,10 @@ export default function ArchiveDetailScreen() {
       }
 
       const json = (await res.json()) as AnalysisResult;
-      setData({
-        ...json,
-        analysis: normalizeAnalysis(json.analysis || []),
-      });
+      setFilename(json.filename || '');
+      setClauses(json.analysis || []);
     } catch (e) {
       setError(e instanceof Error ? e.message : '상세 결과를 불러오지 못했습니다.');
-      setData(null);
     } finally {
       setIsLoading(false);
     }
@@ -184,161 +73,244 @@ export default function ArchiveDetailScreen() {
     fetchDetail();
   }, [fetchDetail]);
 
+  const isWarning = (level: string) => level === 'MODERATE' || level === 'MEDIUM';
+
+  const isSummaryClause = (c: ClauseResult) =>
+    c.clause_number === '종합 분석 결과' || c.clause_number === '부동산 종합 분석';
+
+  const regularClauses = clauses.filter((c) => !isSummaryClause(c));
+  const summaryClauses = clauses.filter((c) => isSummaryClause(c));
+  const highCount = regularClauses.filter((c) => c.risk_level === 'HIGH').length;
+  const moderateCount = regularClauses.filter((c) => isWarning(c.risk_level)).length;
+  const lowCount = regularClauses.filter((c) => c.risk_level === 'LOW').length;
+
+  const getRiskColor = (level: string) => {
+    if (level === 'HIGH')
+      return { bg: Colors.red50, border: Colors.red100, text: Colors.red600, icon: Colors.red500 };
+    if (isWarning(level))
+      return { bg: Colors.yellow50, border: Colors.yellow100, text: Colors.primaryDark, icon: Colors.accent };
+    return { bg: Colors.green50, border: Colors.green100, text: Colors.green600, icon: Colors.green500 };
+  };
+
+  const getRiskLabel = (level: string) => {
+    if (level === 'HIGH') return '위험';
+    if (isWarning(level)) return '주의';
+    return '안전';
+  };
+
+  const getRiskIcon = (level: string): keyof typeof MaterialIcons.glyphMap => {
+    if (level === 'HIGH') return 'error';
+    if (isWarning(level)) return 'warning';
+    return 'check-circle';
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <MaterialIcons name="chevron-left" size={26} color={Colors.stone900} />
+        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+          <MaterialIcons name="arrow-back" size={24} color={Colors.stone900} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle} numberOfLines={1}>
-          {route.params.title}
-        </Text>
-        <View style={styles.headerSpacer} />
+        <Text style={styles.headerTitle}>분석 결과</Text>
+        <View style={styles.headerRight} />
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-        {isLoading ? (
-          <View style={styles.centerWrap}>
-            <ActivityIndicator color={Colors.primaryDark} />
-            <Text style={styles.centerText}>상세 결과를 불러오는 중입니다.</Text>
+      {isLoading ? (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator size="large" color={Colors.primaryDark} />
+          <Text style={styles.loadingText}>분석 결과를 불러오는 중...</Text>
+        </View>
+      ) : error ? (
+        <View style={styles.loadingWrap}>
+          <MaterialIcons name="error-outline" size={48} color={Colors.red500} />
+          <Text style={styles.errorText}>{error}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchDetail}>
+            <Text style={styles.retryText}>다시 시도</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {/* 파일명 */}
+          <View style={styles.filenameCard}>
+            <MaterialIcons name="description" size={22} color={Colors.primaryDark} />
+            <Text style={styles.filenameText} numberOfLines={1}>
+              {filename || route.params.title}
+            </Text>
           </View>
-        ) : error ? (
-          <View style={styles.centerWrap}>
-            <Text style={styles.errorText}>{error}</Text>
+
+          {/* 요약 카드 */}
+          <View style={styles.summaryRow}>
+            <View style={[styles.summaryCard, { backgroundColor: Colors.red50 }]}>
+              <MaterialIcons name="error" size={20} color={Colors.red500} />
+              <Text style={[styles.summaryCount, { color: Colors.red600 }]}>{highCount}</Text>
+              <Text style={styles.summaryLabel}>위험</Text>
+            </View>
+            <View style={[styles.summaryCard, { backgroundColor: Colors.yellow50 }]}>
+              <MaterialIcons name="warning" size={20} color={Colors.accent} />
+              <Text style={[styles.summaryCount, { color: Colors.primaryDark }]}>{moderateCount}</Text>
+              <Text style={styles.summaryLabel}>주의</Text>
+            </View>
+            <View style={[styles.summaryCard, { backgroundColor: Colors.green50 }]}>
+              <MaterialIcons name="check-circle" size={20} color={Colors.green500} />
+              <Text style={[styles.summaryCount, { color: Colors.green600 }]}>{lowCount}</Text>
+              <Text style={styles.summaryLabel}>안전</Text>
+            </View>
           </View>
-        ) : data && data.analysis.length > 0 ? (
-          <View style={styles.list}>
-            {data.analysis.map((item, idx) => (
-              <View key={`${item.clause_number}-${idx}`} style={styles.card}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.cardTitle}>
-                    {item.clause_number} {item.title}
-                  </Text>
-                  <View style={[styles.badge, riskBadgeStyle(item.risk_level)]}>
-                    <Text style={styles.badgeText}>{riskLabel(item.risk_level)}</Text>
+
+          {/* 조항별 결과 */}
+          <Text style={styles.sectionTitle}>조항별 분석 ({regularClauses.length}건)</Text>
+
+          {regularClauses.map((clause, index) => {
+            const color = getRiskColor(clause.risk_level);
+            return (
+              <View key={index} style={[styles.clauseCard, { borderLeftColor: color.icon, borderLeftWidth: 4 }]}>
+                <View style={styles.clauseHeader}>
+                  <View style={styles.clauseTitleRow}>
+                    <MaterialIcons name={getRiskIcon(clause.risk_level)} size={18} color={color.icon} />
+                    <Text style={styles.clauseNumber}>{clause.clause_number}</Text>
+                    <Text style={styles.clauseTitle} numberOfLines={1}>{clause.title}</Text>
+                  </View>
+                  <View style={[styles.riskBadge, { backgroundColor: color.bg }]}>
+                    <Text style={[styles.riskBadgeText, { color: color.text }]}>{getRiskLabel(clause.risk_level)}</Text>
                   </View>
                 </View>
-                <Text style={styles.sectionLabel}>요약</Text>
-                <Text style={styles.sectionText}>{item.summary || '-'}</Text>
-                <Text style={styles.sectionLabel}>수정 제안</Text>
-                <Text style={styles.sectionText}>{item.suggestion || '-'}</Text>
+
+                {clause.original_text ? (
+                  <View style={[styles.clauseSection, styles.originalTextSection]}>
+                    <Text style={styles.clauseSectionLabel}>계약서 원문</Text>
+                    <Text style={styles.originalText}>{clause.original_text}</Text>
+                  </View>
+                ) : null}
+
+                {clause.summary ? (
+                  <View style={styles.clauseSection}>
+                    <Text style={styles.clauseSectionLabel}>분석 요약</Text>
+                    <Text style={styles.clauseSectionText}>{clause.summary}</Text>
+                  </View>
+                ) : null}
+
+                {clause.legal_basis ? (
+                  <View style={[styles.clauseSection, styles.legalBasisSection]}>
+                    <MaterialIcons name="gavel" size={14} color={Colors.primaryDark} />
+                    <Text style={styles.legalBasisText}>{clause.legal_basis}</Text>
+                  </View>
+                ) : null}
+
+                {clause.suggestion ? (
+                  <View style={[styles.clauseSection, styles.suggestionSection]}>
+                    <Text style={styles.clauseSectionLabel}>수정 제안</Text>
+                    <Text style={styles.clauseSectionText}>{clause.suggestion}</Text>
+                  </View>
+                ) : null}
               </View>
-            ))}
-          </View>
-        ) : (
-          <View style={styles.centerWrap}>
-            <Text style={styles.centerText}>분석 상세 결과가 없습니다.</Text>
-          </View>
-        )}
-      </ScrollView>
+            );
+          })}
+
+          {/* 종합 분석 결과 (별도 스타일) */}
+          {summaryClauses.map((clause, index) => (
+            <View key={`summary-${index}`} style={styles.summaryClauseCard}>
+              <View style={styles.summaryClauseHeader}>
+                <MaterialIcons name="assignment" size={20} color={Colors.stone600} />
+                <Text style={styles.summaryClauseTitle}>{clause.clause_number}</Text>
+              </View>
+              <Text style={styles.summaryClauseSubtitle}>{clause.title}</Text>
+
+              {clause.summary ? (
+                <View style={styles.summaryClauseBody}>
+                  <Text style={styles.summaryClauseText}>{clause.summary}</Text>
+                </View>
+              ) : null}
+
+              {clause.suggestion ? (
+                <View style={styles.summaryClauseSuggestion}>
+                  <Text style={styles.clauseSectionLabel}>종합 의견</Text>
+                  <Text style={styles.summaryClauseText}>{clause.suggestion}</Text>
+                </View>
+              ) : null}
+            </View>
+          ))}
+
+          {clauses.length === 0 && (
+            <View style={styles.emptyWrap}>
+              <MaterialIcons name="search-off" size={48} color={Colors.stone300} />
+              <Text style={styles.emptyText}>분석된 조항이 없습니다</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.backgroundLight,
-  },
+  container: { flex: 1, backgroundColor: Colors.backgroundLight },
   header: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12,
   },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
+  backButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: 12 },
+  headerTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.stone900 },
+  headerRight: { width: 40 },
+
+  loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  loadingText: { fontSize: FontSize.sm, color: Colors.stone500 },
+  errorText: { fontSize: FontSize.md, color: Colors.red500, fontWeight: '600' },
+  retryButton: { marginTop: 8, paddingHorizontal: 24, paddingVertical: 10, backgroundColor: Colors.primaryDark, borderRadius: 10 },
+  retryText: { fontSize: FontSize.md, fontWeight: '700', color: Colors.white },
+
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingBottom: 40 },
+
+  filenameCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: Colors.white, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+    borderWidth: 1, borderColor: Colors.stone100, marginBottom: 16,
   },
-  headerTitle: {
-    flex: 1,
-    fontSize: FontSize.md,
-    fontWeight: '700',
-    color: Colors.stone900,
-    marginHorizontal: 8,
+  filenameText: { flex: 1, fontSize: FontSize.md, fontWeight: '600', color: Colors.stone900 },
+
+  summaryRow: { flexDirection: 'row', gap: 10, marginBottom: 24 },
+  summaryCard: { flex: 1, alignItems: 'center', paddingVertical: 14, borderRadius: 14, gap: 4 },
+  summaryCount: { fontSize: FontSize['2xl'], fontWeight: '800' },
+  summaryLabel: { fontSize: FontSize.xs, fontWeight: '600', color: Colors.stone500 },
+
+  sectionTitle: { fontSize: FontSize.lg, fontWeight: '700', color: Colors.stone900, marginBottom: 14 },
+
+  clauseCard: {
+    backgroundColor: Colors.white, borderRadius: 14, padding: 16, marginBottom: 12,
+    borderWidth: 1, borderColor: Colors.stone100,
   },
-  headerSpacer: {
-    width: 36,
-    height: 36,
+  clauseHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
+  clauseTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, marginRight: 8 },
+  clauseNumber: { fontSize: FontSize.sm, fontWeight: '700', color: Colors.stone900 },
+  clauseTitle: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.stone600, flex: 1 },
+  riskBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  riskBadgeText: { fontSize: FontSize.xs, fontWeight: '700' },
+
+  clauseSection: { marginBottom: 8 },
+  originalTextSection: {
+    backgroundColor: '#F8F9FA', borderRadius: 10, padding: 12,
+    borderLeftWidth: 3, borderLeftColor: Colors.stone100,
   },
-  content: {
-    paddingHorizontal: 16,
-    paddingBottom: 24,
+  originalText: { fontSize: FontSize.xs, color: Colors.stone500, lineHeight: 18, fontStyle: 'italic' },
+  legalBasisSection: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: '#EEF2FF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8,
   },
-  list: {
-    gap: 12,
+  legalBasisText: { fontSize: FontSize.xs, fontWeight: '600', color: Colors.primaryDark, flex: 1 },
+  suggestionSection: { backgroundColor: Colors.stone50, borderRadius: 10, padding: 12, marginBottom: 0 },
+  clauseSectionLabel: { fontSize: FontSize.xs, fontWeight: '700', color: Colors.stone400, marginBottom: 4 },
+  clauseSectionText: { fontSize: FontSize.sm, color: Colors.stone800, lineHeight: 20 },
+
+  summaryClauseCard: {
+    backgroundColor: Colors.stone50, borderRadius: 14, padding: 16,
+    marginTop: 16, marginBottom: 12, borderWidth: 1, borderColor: Colors.stone200,
   },
-  card: {
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.stone100,
-    borderRadius: 12,
-    padding: 14,
-    gap: 8,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 8,
-  },
-  cardTitle: {
-    flex: 1,
-    fontSize: FontSize.sm,
-    fontWeight: '700',
-    color: Colors.stone900,
-    lineHeight: 20,
-  },
-  badge: {
-    borderRadius: 9999,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-  },
-  badgeHigh: {
-    backgroundColor: Colors.red500,
-  },
-  badgeMedium: {
-    backgroundColor: Colors.primaryDark,
-  },
-  badgeLow: {
-    backgroundColor: Colors.green500,
-  },
-  badgeUnknown: {
-    backgroundColor: Colors.stone400,
-  },
-  badgeText: {
-    color: Colors.white,
-    fontSize: FontSize.xs,
-    fontWeight: '700',
-  },
-  sectionLabel: {
-    fontSize: FontSize.xs,
-    fontWeight: '700',
-    color: Colors.stone600,
-    marginTop: 2,
-  },
-  sectionText: {
-    fontSize: FontSize.sm,
-    color: Colors.stone900,
-    lineHeight: 20,
-  },
-  centerWrap: {
-    paddingVertical: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  centerText: {
-    fontSize: FontSize.sm,
-    color: Colors.stone500,
-  },
-  errorText: {
-    fontSize: FontSize.sm,
-    color: Colors.red500,
-    textAlign: 'center',
-  },
+  summaryClauseHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  summaryClauseTitle: { fontSize: FontSize.md, fontWeight: '700', color: Colors.stone700 },
+  summaryClauseSubtitle: { fontSize: FontSize.sm, fontWeight: '600', color: Colors.stone500, marginBottom: 12, marginLeft: 28 },
+  summaryClauseBody: { backgroundColor: Colors.white, borderRadius: 10, padding: 12, marginBottom: 8 },
+  summaryClauseSuggestion: { backgroundColor: Colors.white, borderRadius: 10, padding: 12 },
+  summaryClauseText: { fontSize: FontSize.sm, color: Colors.stone600, lineHeight: 20 },
+
+  emptyWrap: { alignItems: 'center', paddingVertical: 40, gap: 8 },
+  emptyText: { fontSize: FontSize.md, color: Colors.stone400 },
 });
