@@ -218,19 +218,6 @@ export default function ContactScreen({ navigation }: Props) {
               {isSubmitting ? '접수 중...' : '문의 접수'}
             </Text>
           </TouchableOpacity>
-
-          {/* 기타 연락 수단 */}
-          <View style={styles.altContactCard}>
-            <Text style={styles.altContactTitle}>다른 방법으로 문의하기</Text>
-            <View style={styles.altRow}>
-              <MaterialIcons name="mail-outline" size={18} color={Colors.stone500} />
-              <Text style={styles.altText}>support@readgye.com</Text>
-            </View>
-            <View style={styles.altRow}>
-              <MaterialIcons name="schedule" size={18} color={Colors.stone500} />
-              <Text style={styles.altText}>평일 09:00 ~ 18:00 (공휴일 제외)</Text>
-            </View>
-          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -362,29 +349,6 @@ const styles = StyleSheet.create({
     fontSize: FontSize.md,
     fontWeight: '700',
     color: Colors.white,
-  },
-  altContactCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.stone100,
-  },
-  altContactTitle: {
-    fontSize: FontSize.sm,
-    fontWeight: '700',
-    color: Colors.stone900,
-    marginBottom: 12,
-  },
-  altRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  altText: {
-    fontSize: FontSize.sm,
-    color: Colors.stone500,
   },
   successContainer: {
     flex: 1,
