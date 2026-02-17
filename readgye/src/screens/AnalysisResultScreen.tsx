@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -6,8 +6,10 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  BackHandler,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useFocusEffect } from '@react-navigation/native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Colors, FontSize, BorderRadius } from '../constants/theme';
 import { useAuth, API_BASE_URL } from '../context/AuthContext';
@@ -38,6 +40,21 @@ export default function AnalysisResultScreen({ route, navigation }: Props) {
   useEffect(() => {
     fetchResult();
   }, []);
+
+  const goToHome = useCallback(() => {
+    navigation.navigate('HomeMain');
+  }, [navigation]);
+
+  useFocusEffect(
+    useCallback(() => {
+      const onBackPress = () => {
+        goToHome();
+        return true;
+      };
+      const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+      return () => sub.remove();
+    }, [goToHome])
+  );
 
   // GET /api/analyze/{document_id}/result
   const fetchResult = async () => {
@@ -100,7 +117,7 @@ export default function AnalysisResultScreen({ route, navigation }: Props) {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => navigation.popToTop()}
+          onPress={goToHome}
           activeOpacity={0.7}
         >
           <MaterialIcons name="arrow-back" size={24} color={Colors.stone900} />
@@ -227,7 +244,7 @@ export default function AnalysisResultScreen({ route, navigation }: Props) {
           <TouchableOpacity
             style={styles.homeButton}
             activeOpacity={0.85}
-            onPress={() => navigation.popToTop()}
+            onPress={goToHome}
           >
             <MaterialIcons name="home" size={20} color={Colors.white} />
             <Text style={styles.homeButtonText}>홈으로 돌아가기</Text>
