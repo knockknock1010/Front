@@ -162,7 +162,7 @@ export default function MembershipScreen({ navigation }: Props) {
         <View style={styles.demoNoticeCard}>
           <MaterialIcons name="campaign" size={18} color={Colors.primaryDark} />
           <Text style={styles.demoNoticeText}>
-            현재는 데모라서 작동하지 않는 페이지입니다.
+            현재 결제 페이지는 데모 버전으로, 결제 여부와 관계없이 프리미엄이 적용되고 있습니다.
           </Text>
         </View>
 
