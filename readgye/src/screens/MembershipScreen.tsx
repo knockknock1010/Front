@@ -86,11 +86,48 @@ export default function MembershipScreen({ navigation }: Props) {
       // 이렇게 하면 앱을 껐다 켜지 않아도 UI가 프리미엄으로 즉시 바뀝니다.
       setLocalPremium(true); 
       
-      Alert.alert('성공', '프리미엄 플랜이 활성화되었습니다! 🎉');
+      console.log('성공', '프리미엄 플랜이 활성화되었습니다! 🎉');
 
     } catch (error) {
       console.error(error);
-      Alert.alert('오류', '결제 진행 중 문제가 발생했습니다.');
+      console.warn('오류', '결제 진행 중 문제가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 👇 추가할 구독 해지 로직
+  const handleCancelSubscription = async () => {
+    console.log("해지 버튼 클릭됨!");
+    
+    // Alert.alert를 제거하고 바로 로직을 시작합니다.
+    if (!token) return;
+
+    try {
+      setIsLoading(true);
+      console.log("서버로 해지 요청을 보냅니다...");
+
+      const res = await fetch(`${API_BASE_URL}/api/users/polar/cancel-demo`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      console.log("서버 응답 상태:", res.status);
+
+      if (res.ok) {
+        // 성공 시 로컬 상태 변경 (UI 즉시 반영)
+        setLocalPremium(false);
+        console.log("해지 성공: 무료 플랜으로 전환되었습니다.");
+      } else {
+        const errorText = await res.text();
+        console.warn("해지 실패 서버 메시지:", errorText);
+      }
+    } catch (error) {
+      console.error("네트워크 에러:", error);
+      console.warn("네트워크 에러가 발생했습니다.");
     } finally {
       setIsLoading(false);
     }
@@ -321,7 +358,7 @@ export default function MembershipScreen({ navigation }: Props) {
           {currentPlan === 'premium' && (
             <>
               <View style={styles.menuDivider} />
-              <TouchableOpacity style={styles.menuRow} activeOpacity={0.7}>
+              <TouchableOpacity style={styles.menuRow} activeOpacity={0.7} onPress={handleCancelSubscription}>
                 <View style={styles.menuRowLeft}>
                   <MaterialIcons name="cancel" size={22} color={Colors.red500} />
                   <View style={styles.menuTextWrap}>
