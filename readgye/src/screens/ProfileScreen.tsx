@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { Colors, FontSize } from '../constants/theme';
+import { Colors, FontSize, hs } from '../constants/theme';
 import { useAuth } from '../context/AuthContext';
 
 type SettingRowProps = {
@@ -176,9 +176,9 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   avatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: hs(56),
+    height: hs(56),
+    borderRadius: hs(28),
     backgroundColor: Colors.yellow100,
   },
   profileName: {
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowLabel: {
-    fontSize: 15,
+    fontSize: FontSize.md,
     fontWeight: '600',
     color: Colors.stone900,
   },

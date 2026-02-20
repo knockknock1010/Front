@@ -13,7 +13,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
-import { Colors, FontSize, BorderRadius } from '../constants/theme';
+import { Colors, FontSize, BorderRadius, hs, vs } from '../constants/theme';
 import { useAuth, API_BASE_URL } from '../context/AuthContext';
 
 type Props = {
@@ -406,8 +406,8 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   backButton: {
-    width: 40,
-    height: 40,
+    width: hs(40),
+    height: hs(40),
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 12,
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
     color: Colors.stone900,
   },
   headerRight: {
-    width: 40,
+    width: hs(40),
   },
   content: {
     flex: 1,
@@ -433,15 +433,15 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.stone100,
     borderStyle: 'dashed',
-    paddingVertical: 40,
-    paddingHorizontal: 24,
+    paddingVertical: vs(40),
+    paddingHorizontal: hs(24),
     alignItems: 'center',
     marginBottom: 16,
   },
   dropIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: hs(80),
+    height: hs(80),
+    borderRadius: hs(40),
     backgroundColor: Colors.yellow50,
     alignItems: 'center',
     justifyContent: 'center',
@@ -525,8 +525,8 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   fileIconWrap: {
-    width: 56,
-    height: 56,
+    width: hs(56),
+    height: hs(56),
     borderRadius: 14,
     backgroundColor: Colors.red50,
     alignItems: 'center',
@@ -575,8 +575,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   categorySelectorIconWrap: {
-    width: 40,
-    height: 40,
+    width: hs(40),
+    height: hs(40),
     borderRadius: 10,
     backgroundColor: Colors.yellow50,
     alignItems: 'center',
@@ -641,8 +641,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
   categoryIconWrap: {
-    width: 44,
-    height: 44,
+    width: hs(44),
+    height: hs(44),
     borderRadius: 12,
     backgroundColor: Colors.white,
     alignItems: 'center',
@@ -700,9 +700,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
   uploadingIconWrap: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: hs(96),
+    height: hs(96),
+    borderRadius: hs(48),
     backgroundColor: Colors.yellow50,
     alignItems: 'center',
     justifyContent: 'center',

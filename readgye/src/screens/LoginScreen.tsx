@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../context/AuthContext';
-import { Colors, FontSize, BorderRadius } from '../constants/theme';
+import { Colors, FontSize, BorderRadius, hs, vs, ms } from '../constants/theme';
 
 type Props = {
   navigation?: any;
@@ -218,24 +218,24 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'space-between',
-    paddingHorizontal: 28,
-    paddingTop: 40,
-    paddingBottom: 32,
+    paddingHorizontal: hs(28),
+    paddingTop: vs(40),
+    paddingBottom: vs(32),
   },
 
   // Logo
   logoArea: {
     alignItems: 'center',
-    marginTop: 24,
-    marginBottom: 32,
+    marginTop: vs(24),
+    marginBottom: vs(32),
   },
   logo: {
-    width: 88,
-    height: 88,
-    marginBottom: 16,
+    width: hs(88),
+    height: hs(88),
+    marginBottom: vs(16),
   },
   appName: {
-    fontSize: 32,
+    fontSize: ms(32),
     fontWeight: '700',
     color: Colors.stone900,
     marginBottom: 4,
@@ -274,7 +274,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.stone100,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: 14,
-    height: 52,
+    height: vs(52),
   },
   inputIcon: {
     marginRight: 10,

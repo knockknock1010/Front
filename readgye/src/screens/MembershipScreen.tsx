@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   saveBadgeText: {
-    fontSize: 10,
+    fontSize: FontSize.xs,
     fontWeight: '700',
     color: Colors.white,
   },
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuLabel: {
-    fontSize: 15,
+    fontSize: FontSize.md,
     fontWeight: '600',
     color: Colors.stone900,
   },

@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   rowLabel: {
-    fontSize: 15,
+    fontSize: FontSize.md,
     fontWeight: '600',
     color: Colors.stone900,
   },

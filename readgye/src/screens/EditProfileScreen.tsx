@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
-import { Colors, FontSize } from '../constants/theme';
+import { Colors, FontSize, hs } from '../constants/theme';
 import { useAuth, BackendProfile } from '../context/AuthContext';
 
 type Props = {
@@ -200,15 +200,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   avatar: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: hs(88),
+    height: hs(88),
+    borderRadius: hs(44),
     backgroundColor: Colors.yellow100,
   },
   avatarPlaceholder: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
+    width: hs(88),
+    height: hs(88),
+    borderRadius: hs(44),
     backgroundColor: Colors.yellow100,
     alignItems: 'center',
     justifyContent: 'center',

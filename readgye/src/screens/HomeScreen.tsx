@@ -11,11 +11,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
-import { Colors, FontSize, BorderRadius } from '../constants/theme';
+import { Colors, FontSize, BorderRadius, hs, vs, ms } from '../constants/theme';
 import { API_BASE_URL, useAuth } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 24 * 2 - 16) / 2;
+const CARD_WIDTH = (width - hs(24) * 2 - hs(16)) / 2;
 const WEEKDAYS_KO = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 const CONTRACT_TIPS = [
   '계약 기간 시작일과 종료일을 정확히 확인하고 자동 연장 조건을 체크하세요.',
@@ -390,8 +390,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoImage: {
-    width: 44,
-    height: 44,
+    width: hs(44),
+    height: hs(44),
     borderRadius: BorderRadius.xl,
   },
   notifBtn: {
@@ -414,8 +414,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingHorizontal: hs(24),
+    paddingBottom: vs(32),
   },
   greeting: {
     marginTop: 8,
@@ -456,8 +456,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statIconWrap: {
-    width: 28,
-    height: 28,
+    width: hs(28),
+    height: hs(28),
     borderRadius: BorderRadius.full,
     alignItems: 'center',
     justifyContent: 'center',
@@ -487,8 +487,8 @@ const styles = StyleSheet.create({
     transform: [{ rotate: '12deg' }],
   },
   ctaIconBg: {
-    width: 48,
-    height: 48,
+    width: hs(48),
+    height: hs(48),
     borderRadius: BorderRadius.lg,
     backgroundColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center',
@@ -557,8 +557,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   activityIcon: {
-    width: 40,
-    height: 40,
+    width: hs(40),
+    height: hs(40),
     borderRadius: BorderRadius.md,
     alignItems: 'center',
     justifyContent: 'center',
@@ -627,8 +627,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.yellow100,
   },
   tipIcon: {
-    width: 48,
-    height: 48,
+    width: hs(48),
+    height: hs(48),
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.white,
     alignItems: 'center',

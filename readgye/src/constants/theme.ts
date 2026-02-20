@@ -1,3 +1,21 @@
+import { Dimensions } from 'react-native';
+
+// ─── 반응형 스케일링 ───
+// 기준 디자인: 375 x 812 (iPhone X / 일반 안드로이드 기준)
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const BASE_WIDTH = 375;
+const BASE_HEIGHT = 812;
+
+/** 수평 스케일 (width 기반) — 아이콘, 아바타, 수평 패딩 등 */
+export const hs = (size: number) => Math.round((SCREEN_WIDTH / BASE_WIDTH) * size);
+
+/** 수직 스케일 (height 기반) — 수직 패딩/마진 등 */
+export const vs = (size: number) => Math.round((SCREEN_HEIGHT / BASE_HEIGHT) * size);
+
+/** 폰트/아이콘 등 완만한 스케일 (factor 기본 0.5) */
+export const ms = (size: number, factor = 0.5) =>
+  Math.round(size + (hs(size) - size) * factor);
+
 export const Colors = {
   primary: '#FBBF24',
   primaryDark: '#D97706',

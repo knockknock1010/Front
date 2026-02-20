@@ -19,7 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from '@react-navigation/native';
-import { Colors, FontSize } from '../constants/theme';
+import { Colors, FontSize, hs, vs } from '../constants/theme';
 import { useAuth, API_BASE_URL } from '../context/AuthContext';
 
 // ─── 타입 정의 ───
@@ -324,34 +324,42 @@ export default function CounselingScreen() {
   );
 
   // ─── 빈 상태 (추천 질문) ───
-  const renderEmptyState = () => (
-    <View style={[styles.emptyContainer, isKeyboardVisible && styles.emptyContainerKeyboard]}>
-      {!isKeyboardVisible && (
-        <>
-          <View style={styles.emptyIconWrap}>
-            <MaterialIcons name="chat-bubble-outline" size={48} color={Colors.stone300} />
-          </View>
-          <Text style={styles.emptyTitle}>AI 법률 상담</Text>
-          <Text style={styles.emptyDesc}>
-            업로드한 계약서를 바탕으로{'\n'}궁금한 점을 물어보세요
-          </Text>
-        </>
-      )}
-      <View style={styles.suggestionsWrap}>
-        {SUGGESTED_QUESTIONS.map((q, i) => (
-          <TouchableOpacity
-            key={i}
-            style={styles.suggestionChip}
-            activeOpacity={0.7}
-            onPress={() => sendMessage(q)}
-          >
-            <MaterialIcons name="lightbulb-outline" size={14} color="#0f49bd" />
-            <Text style={styles.suggestionChipText}>{q}</Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-    </View>
-  );
+  const renderEmptyState = () => {
+    // 키보드가 올라오면 빈 상태 전체를 숨김
+    if (isKeyboardVisible) {
+      return <View style={styles.emptyContainerKeyboard} />;
+    }
+
+    return (
+      <ScrollView
+        style={styles.emptyScrollView}
+        contentContainerStyle={styles.emptyScrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.emptyIconWrap}>
+          <MaterialIcons name="chat-bubble-outline" size={48} color={Colors.stone300} />
+        </View>
+        <Text style={styles.emptyTitle}>AI 법률 상담</Text>
+        <Text style={styles.emptyDesc}>
+          업로드한 계약서를 바탕으로{'\n'}궁금한 점을 물어보세요
+        </Text>
+        <View style={styles.suggestionsWrap}>
+          {SUGGESTED_QUESTIONS.map((q, i) => (
+            <TouchableOpacity
+              key={i}
+              style={styles.suggestionChip}
+              activeOpacity={0.7}
+              onPress={() => sendMessage(q)}
+            >
+              <MaterialIcons name="lightbulb-outline" size={14} color="#0f49bd" />
+              <Text style={styles.suggestionChipText}>{q}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ScrollView>
+    );
+  };
 
   // ─── 타이핑 인디케이터 ───
   const renderTypingIndicator = () => (
@@ -600,8 +608,8 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   headerButton: {
-    width: 40,
-    height: 40,
+    width: hs(40),
+    height: hs(40),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -611,8 +619,8 @@ const styles = StyleSheet.create({
     color: Colors.stone900,
   },
   headerSpacer: {
-    width: 40,
-    height: 40,
+    width: hs(40),
+    height: hs(40),
   },
   modalBackdrop: {
     flex: 1,
@@ -792,9 +800,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   avatarWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: hs(36),
+    height: hs(36),
+    borderRadius: hs(18),
     overflow: 'hidden',
     backgroundColor: Colors.white,
     borderWidth: 1,
@@ -890,29 +898,31 @@ const styles = StyleSheet.create({
     color: Colors.stone400,
   },
   // 빈 상태
-  emptyContainer: {
+  emptyScrollView: {
     flex: 1,
+  },
+  emptyScrollContent: {
+    flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 32,
     paddingBottom: 40,
+    paddingTop: 16,
   },
   emptyContainerKeyboard: {
-    justifyContent: 'flex-start',
-    paddingTop: 12,
-    paddingBottom: 0,
+    flex: 1,
   },
   emptyIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: hs(80),
+    height: hs(80),
+    borderRadius: hs(40),
     backgroundColor: Colors.stone100,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: vs(16),
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: FontSize.xl,
     fontWeight: '700',
     color: Colors.stone900,
     marginBottom: 8,
@@ -968,15 +978,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   input: {
-    fontSize: 14,
+    fontSize: FontSize.md,
     color: Colors.stone900,
     paddingVertical: 10,
-    maxHeight: 96,
+    maxHeight: vs(96),
   },
   sendButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: hs(44),
+    height: hs(44),
+    borderRadius: hs(22),
     backgroundColor: '#0f49bd',
     alignItems: 'center',
     justifyContent: 'center',
