@@ -1,20 +1,42 @@
-import { Dimensions } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 
 // ─── 반응형 스케일링 ───
 // 기준 디자인: 375 x 812 (iPhone X / 일반 안드로이드 기준)
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const BASE_WIDTH = 375;
 const BASE_HEIGHT = 812;
+const MIN_SCALE = 0.9;
+const MAX_SCALE = 1.2;
+
+const clamp = (value: number, min: number, max: number) => {
+  return Math.min(Math.max(value, min), max);
+};
+
+const getScales = () => {
+  const { width, height } = Dimensions.get('window');
+
+  // 웹(모바일 브라우저/디바이스 모드)에서는 기기 픽셀비로 과대 계산되는 경우가 있어 스케일을 더 보수적으로 제한
+  const widthScale = clamp(width / BASE_WIDTH, MIN_SCALE, Platform.OS === 'web' ? 1.05 : MAX_SCALE);
+  const heightScale = clamp(height / BASE_HEIGHT, MIN_SCALE, MAX_SCALE);
+
+  return { widthScale, heightScale };
+};
 
 /** 수평 스케일 (width 기반) — 아이콘, 아바타, 수평 패딩 등 */
-export const hs = (size: number) => Math.round((SCREEN_WIDTH / BASE_WIDTH) * size);
+export const hs = (size: number) => {
+  const { widthScale } = getScales();
+  return Math.round(size * widthScale);
+};
 
 /** 수직 스케일 (height 기반) — 수직 패딩/마진 등 */
-export const vs = (size: number) => Math.round((SCREEN_HEIGHT / BASE_HEIGHT) * size);
+export const vs = (size: number) => {
+  const { heightScale } = getScales();
+  return Math.round(size * heightScale);
+};
 
 /** 폰트/아이콘 등 완만한 스케일 (factor 기본 0.5) */
-export const ms = (size: number, factor = 0.5) =>
-  Math.round(size + (hs(size) - size) * factor);
+export const ms = (size: number, factor = 0.5) => {
+  return Math.round(size + (hs(size) - size) * factor);
+};
 
 export const Colors = {
   primary: '#FBBF24',

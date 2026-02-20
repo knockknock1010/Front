@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Dimensions,
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,8 +13,6 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { Colors, FontSize, BorderRadius, hs, vs, ms } from '../constants/theme';
 import { API_BASE_URL, useAuth } from '../context/AuthContext';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - hs(24) * 2 - hs(16)) / 2;
 const WEEKDAYS_KO = ['일요일', '월요일', '화요일', '수요일', '목요일', '금요일', '토요일'];
 const CONTRACT_TIPS = [
   '계약 기간 시작일과 종료일을 정확히 확인하고 자동 연장 조건을 체크하세요.',
@@ -58,7 +55,7 @@ function StatCard({
   value: number;
 }) {
   return (
-    <View style={[styles.statCard, { minWidth: CARD_WIDTH }]}> 
+    <View style={styles.statCard}>
       <View style={styles.statHeader}>
         <View style={[styles.statIconWrap, { backgroundColor: iconBg }]}> 
           <MaterialIcons name={icon} size={16} color={iconColor} />

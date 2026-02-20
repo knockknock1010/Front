@@ -81,6 +81,7 @@ export default function CounselingScreen() {
   const [isNewChatMode, setIsNewChatMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [isInputFocused, setIsInputFocused] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const fetchSessions = useCallback(async (): Promise<ChatSessionItem[]> => {
@@ -325,8 +326,8 @@ export default function CounselingScreen() {
 
   // ─── 빈 상태 (추천 질문) ───
   const renderEmptyState = () => {
-    // 키보드가 올라오면 빈 상태 전체를 숨김
-    if (isKeyboardVisible) {
+    // 키보드가 올라오거나 입력창이 포커스되면 빈 상태 전체를 숨김
+    if (isKeyboardVisible || isInputFocused) {
       return <View style={styles.emptyContainerKeyboard} />;
     }
 
@@ -494,6 +495,8 @@ export default function CounselingScreen() {
             <TextInput
               value={inputText}
               onChangeText={setInputText}
+              onFocus={() => setIsInputFocused(true)}
+              onBlur={() => setIsInputFocused(false)}
               placeholder="계약서에 대해 궁금한 점을 물어보세요"
               placeholderTextColor={Colors.stone400}
               style={styles.input}
@@ -595,9 +598,9 @@ const styles = StyleSheet.create({
   // [추가됨] 상단 영역 고정 스타일
   topSection: {
     backgroundColor: Colors.backgroundLight,
-    zIndex: 10,
-    elevation: 5, // Android 그림자
     paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.stone100,
   },
   // 헤더
   header: {
@@ -903,11 +906,11 @@ const styles = StyleSheet.create({
   },
   emptyScrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     paddingHorizontal: 32,
     paddingBottom: 40,
-    paddingTop: 16,
+    paddingTop: 20,
   },
   emptyContainerKeyboard: {
     flex: 1,
