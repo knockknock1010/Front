@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert, Platform } from 'react-native';
+import * as Crypto from 'expo-crypto';
 
 const GOOGLE_WEB_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '';
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
@@ -149,23 +150,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const notifications: BackendNotification[] = await res.json();
       setUnreadNotificationCount(notifications.length);
-      if (notifications.length === 0) {
-        return;
-      }
-      if (notifications.length === 1) {
-        showAppAlert(notifications[0].title, notifications[0].message);
-      } else {
-        showAppAlert('분석 완료', `${notifications.length}건의 계약서 분석이 완료되었습니다.`);
-      }
-
-      await markAllNotificationsAsRead(token);
-      setUnreadNotificationCount(0);
     } catch (e) {
       console.log('Failed to poll notifications', e);
     } finally {
       pollingLockRef.current = false;
     }
-  }, [markAllNotificationsAsRead, showAppAlert, token]);
+  }, [token]);
 
   useEffect(() => {
     if (!token) {
@@ -176,7 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     pollUnreadNotifications();
     const timer = setInterval(() => {
       pollUnreadNotifications();
-    }, 8000);
+    }, 30000);
 
     return () => clearInterval(timer);
   }, [pollUnreadNotifications, token]);
@@ -270,8 +260,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(userData);
         await AsyncStorage.setItem('user', JSON.stringify(userData));
 
-        // 백엔드 로그인
-        const googlePassword = `google_${googleUser.id}`;
+        // 백엔드 로그인 - 기기별 고유 비밀번호 생성 후 저장
+        const storageKey = `google_pwd_${googleUser.id}`;
+        let googlePassword = await AsyncStorage.getItem(storageKey);
+        if (!googlePassword) {
+          googlePassword = await Crypto.digestStringAsync(
+            Crypto.CryptoDigestAlgorithm.SHA256,
+            `google_${googleUser.id}_${Date.now()}_${Math.random()}`,
+          );
+          await AsyncStorage.setItem(storageKey, googlePassword);
+        }
         await loginToBackend(googleUser.email, googlePassword, googleUser.name || '');
 
         console.log('Google 로그인 성공:', googleUser.email);

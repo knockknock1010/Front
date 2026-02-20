@@ -11,13 +11,13 @@ import {
   Platform,
   KeyboardAvoidingView,
   Keyboard,
-  Clipboard,
   Modal,
   Pressable,
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
+import * as Clipboard from 'expo-clipboard';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors, FontSize } from '../constants/theme';
 import { useAuth, API_BASE_URL } from '../context/AuthContext';
@@ -80,6 +80,7 @@ export default function CounselingScreen() {
   const [isSessionLoading, setIsSessionLoading] = useState(false);
   const [isNewChatMode, setIsNewChatMode] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
 
   const fetchSessions = useCallback(async (): Promise<ChatSessionItem[]> => {
@@ -165,15 +166,23 @@ export default function CounselingScreen() {
     }, [restoreLastSession]),
   );
 
-  // ─── 키보드 표시 시 스크롤 맨 아래로 ───
+  // ─── 키보드 표시/숨김 감지 ───
   useEffect(() => {
     const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
-    const sub = Keyboard.addListener(showEvent, () => {
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const showSub = Keyboard.addListener(showEvent, () => {
+      setIsKeyboardVisible(true);
       setTimeout(() => {
         flatListRef.current?.scrollToEnd({ animated: true });
       }, 100);
     });
-    return () => sub.remove();
+    const hideSub = Keyboard.addListener(hideEvent, () => {
+      setIsKeyboardVisible(false);
+    });
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
   // ─── 메시지 전송 ───
@@ -253,8 +262,8 @@ export default function CounselingScreen() {
   }, []);
 
   // ─── 클립보드 복사 ───
-  const copyToClipboard = useCallback((text: string) => {
-    Clipboard.setString(text);
+  const copyToClipboard = useCallback(async (text: string) => {
+    await Clipboard.setStringAsync(text);
     if (Platform.OS === 'web') {
       window.alert('복사되었습니다!');
     }
@@ -316,14 +325,18 @@ export default function CounselingScreen() {
 
   // ─── 빈 상태 (추천 질문) ───
   const renderEmptyState = () => (
-    <View style={styles.emptyContainer}>
-      <View style={styles.emptyIconWrap}>
-        <MaterialIcons name="chat-bubble-outline" size={48} color={Colors.stone300} />
-      </View>
-      <Text style={styles.emptyTitle}>AI 법률 상담</Text>
-      <Text style={styles.emptyDesc}>
-        업로드한 계약서를 바탕으로{'\n'}궁금한 점을 물어보세요
-      </Text>
+    <View style={[styles.emptyContainer, isKeyboardVisible && styles.emptyContainerKeyboard]}>
+      {!isKeyboardVisible && (
+        <>
+          <View style={styles.emptyIconWrap}>
+            <MaterialIcons name="chat-bubble-outline" size={48} color={Colors.stone300} />
+          </View>
+          <Text style={styles.emptyTitle}>AI 법률 상담</Text>
+          <Text style={styles.emptyDesc}>
+            업로드한 계약서를 바탕으로{'\n'}궁금한 점을 물어보세요
+          </Text>
+        </>
+      )}
       <View style={styles.suggestionsWrap}>
         {SUGGESTED_QUESTIONS.map((q, i) => (
           <TouchableOpacity
@@ -864,6 +877,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 32,
     paddingBottom: 40,
+  },
+  emptyContainerKeyboard: {
+    justifyContent: 'flex-start',
+    paddingTop: 12,
+    paddingBottom: 0,
   },
   emptyIconWrap: {
     width: 80,

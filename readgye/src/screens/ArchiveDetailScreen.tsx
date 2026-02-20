@@ -51,7 +51,7 @@ export default function ArchiveDetailScreen() {
     setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/api/analyze/${route.params.documentId}/result`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
       if (!res.ok) {
